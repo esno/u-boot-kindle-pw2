@@ -7,6 +7,8 @@
  * Copyright (C) 2008 Freescale Semiconductor, Inc.
  *		Dave Liu <daveliu@freescale.com>
  *
+ * Copyright (C) 2009-2011 Freescale Semiconductor, Inc.
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of
@@ -48,9 +50,12 @@ int __sata_initialize(void)
 		sata_dev_desc[i].block_write = sata_write;
 
 		rc = init_sata(i);
-		rc = scan_sata(i);
-		if ((sata_dev_desc[i].lba > 0) && (sata_dev_desc[i].blksz > 0))
-			init_part(&sata_dev_desc[i]);
+		if (!rc) {
+			rc = scan_sata(i);
+			if ((sata_dev_desc[i].lba > 0) &&
+				(sata_dev_desc[i].blksz > 0))
+				init_part(&sata_dev_desc[i]);
+		}
 	}
 	sata_curr_device = 0;
 	return rc;

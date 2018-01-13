@@ -57,14 +57,15 @@
 
 #ifndef __ASSEMBLY__
 
-#define isb() __asm__ __volatile__ ("" : : : "memory")
+//#define isb() __asm__ __volatile__ ("" : : : "memory")
+#define isb() __asm__ __volatile__ ("isb")
 
 #define nop() __asm__ __volatile__("mov\tr0,r0\t@ nop\n\t");
 
 static inline unsigned int get_cr(void)
 {
 	unsigned int val;
-	asm("mrc p15, 0, %0, c1, c0, 0	@ get CR" : "=r" (val) : : "cc");
+	asm volatile("mrc p15, 0, %0, c1, c0, 0	@ get CR" : "=r" (val) : : "cc");
 	return val;
 }
 

@@ -29,7 +29,7 @@ AOBJS	=
 
 # core
 COBJS-y += main.o
-COBJS-y += circbuf.o
+COBJS-$(CONFIG_CIRCBUF) += circbuf.o
 COBJS-y += console.o
 COBJS-y += command.o
 COBJS-y += dlmalloc.o
@@ -37,15 +37,16 @@ COBJS-y += exports.o
 COBJS-$(CONFIG_SYS_HUSH_PARSER) += hush.o
 COBJS-y += image.o
 COBJS-y += memsize.o
-COBJS-y += s_record.o
+COBJS-$(CONFIG_SRECORD) += s_record.o
 COBJS-$(CONFIG_SERIAL_MULTI) += serial.o
 COBJS-y += stdio.o
-COBJS-y += xyzModem.o
+COBJS-$(CONFIG_XYZMODEM) += xyzModem.o
 
 # core command
 COBJS-y += cmd_boot.o
 COBJS-y += cmd_bootm.o
 COBJS-y += cmd_nvedit.o
+COBJS-$(CONFIG_CMD_SPLASH) += cmd_splash.o
 
 # environment
 COBJS-y += env_common.o
@@ -55,12 +56,16 @@ COBJS-$(CONFIG_ENV_IS_EMBEDDED) += env_embedded.o
 COBJS-$(CONFIG_ENV_IS_IN_EEPROM) += env_embedded.o
 COBJS-$(CONFIG_ENV_IS_IN_FLASH) += env_embedded.o
 COBJS-$(CONFIG_ENV_IS_IN_NVRAM) += env_embedded.o
+COBJS-$(CONFIG_ENV_IS_IN_MMC) += env_embedded.o
+COBJS-$(CONFIG_ENV_IS_IN_NAND) += env_embedded.o
+COBJS-$(CONFIG_ENV_IS_IN_SPI_FLASH) += env_embedded.o
 COBJS-$(CONFIG_ENV_IS_IN_FLASH) += env_flash.o
 COBJS-$(CONFIG_ENV_IS_IN_MG_DISK) += env_mgdisk.o
 COBJS-$(CONFIG_ENV_IS_IN_NAND) += env_nand.o
 COBJS-$(CONFIG_ENV_IS_IN_NVRAM) += env_nvram.o
 COBJS-$(CONFIG_ENV_IS_IN_ONENAND) += env_onenand.o
 COBJS-$(CONFIG_ENV_IS_IN_SPI_FLASH) += env_sf.o
+COBJS-$(CONFIG_ENV_IS_IN_MMC) += env_mmc.o
 COBJS-$(CONFIG_ENV_IS_NOWHERE) += env_nowhere.o
 
 # command
@@ -72,6 +77,7 @@ COBJS-$(CONFIG_CMD_BEDBUG) += bedbug.o cmd_bedbug.o
 COBJS-$(CONFIG_CMD_BMP) += cmd_bmp.o
 COBJS-$(CONFIG_CMD_BOOTLDR) += cmd_bootldr.o
 COBJS-$(CONFIG_CMD_CACHE) += cmd_cache.o
+COBJS-$(CONFIG_CMD_CLOCK) += cmd_clk.o
 COBJS-$(CONFIG_CMD_CONSOLE) += cmd_console.o
 COBJS-$(CONFIG_CMD_CPLBINFO) += cmd_cplbinfo.o
 COBJS-$(CONFIG_DATAFLASH_MMC_SELECT) += cmd_dataflash_mmc_mux.o
@@ -96,6 +102,9 @@ COBJS-$(CONFIG_CMD_FLASH) += cmd_flash.o
 ifdef CONFIG_FPGA
 COBJS-$(CONFIG_CMD_FPGA) += cmd_fpga.o
 endif
+COBJS-$(CONFIG_CMD_IIM) += cmd_iim.o
+COBJS-$(CONFIG_CMD_FSL_OTP) += cmd_fsl_otp.o
+COBJS-$(CONFIG_CMD_CRC) += cmd_checkcrc.o
 COBJS-$(CONFIG_CMD_I2C) += cmd_i2c.o
 COBJS-$(CONFIG_CMD_IDE) += cmd_ide.o
 COBJS-$(CONFIG_CMD_IMMAP) += cmd_immap.o
@@ -120,12 +129,14 @@ COBJS-y += cmd_nand.o
 COBJS-$(CONFIG_CMD_NET) += cmd_net.o
 COBJS-$(CONFIG_CMD_ONENAND) += cmd_onenand.o
 COBJS-$(CONFIG_CMD_OTP) += cmd_otp.o
+COBJS-$(CONFIG_CMD_PATA) += cmd_pata.o
 ifdef CONFIG_PCI
 COBJS-$(CONFIG_CMD_PCI) += cmd_pci.o
 endif
-COBJS-y += cmd_pcmcia.o
+COBJS-$(CONFIG_CMD_PCMCIA) += cmd_pcmcia.o
 COBJS-$(CONFIG_CMD_PORTIO) += cmd_portio.o
 COBJS-$(CONFIG_CMD_REGINFO) += cmd_reginfo.o
+COBJS-$(CONFIG_CMD_REGUL) += cmd_regul.o
 COBJS-$(CONFIG_CMD_REISER) += cmd_reiser.o
 COBJS-$(CONFIG_CMD_SATA) += cmd_sata.o
 COBJS-$(CONFIG_CMD_SF) += cmd_sf.o
@@ -152,7 +163,7 @@ COBJS-$(CONFIG_VFD) += cmd_vfd.o
 COBJS-$(CONFIG_DDR_SPD) += ddr_spd.o
 COBJS-$(CONFIG_HWCONFIG) += hwconfig.o
 COBJS-$(CONFIG_CONSOLE_MUX) += iomux.o
-COBJS-y += flash.o
+COBJS-$(CONFIG_FLASH) += flash.o
 COBJS-$(CONFIG_CMD_KGDB) += kgdb.o
 COBJS-$(CONFIG_KALLSYMS) += kallsyms.o
 COBJS-$(CONFIG_LCD) += lcd.o
@@ -160,11 +171,32 @@ COBJS-$(CONFIG_LYNXKDI) += lynxkdi.o
 COBJS-$(CONFIG_MODEM_SUPPORT) += modem.o
 COBJS-$(CONFIG_UPDATE_TFTP) += update.o
 COBJS-$(CONFIG_USB_KEYBOARD) += usb_kbd.o
+COBJS-$(CONFIG_CMD_IMXOTP) += cmd_imxotp.o
 
+# lab126
+COBJS-$(CONFIG_CMD_CSPI) += cmd_cspi.o
+ifdef CONFIG_PMIC
+ifdef CONFIG_PMIC_SPI
+COBJS-$(CONFIG_CMD_PMIC) += cmd_pmic_spi.o
+else
+COBJS-$(CONFIG_CMD_PMIC) += cmd_pmic.o
+COBJS-$(CONFIG_CMD_VNI) += cmd_vni.o
+endif
+endif
+COBJS-$(CONFIG_CMD_HAPTIC) += cmd_haptic.o
+COBJS-$(CONFIG_CMD_FSR) += cmd_fsr.o
+COBJS-$(CONFIG_CMD_GADGET) += cmd_gadget.o
+COBJS-$(CONFIG_CMD_IDME) += cmd_idme.o
+COBJS-$(CONFIG_CMD_LPM) += cmd_mx6sl_lpm.o
 
 COBJS	:= $(sort $(COBJS-y))
 SRCS	:= $(AOBJS:.o=.S) $(COBJS:.o=.c)
 OBJS	:= $(addprefix $(obj),$(AOBJS) $(COBJS))
+
+ifdef CONFIG_CMD_FB
+OBJS += cmd_fb.o 
+OBJS += libfboot.o
+endif
 
 CPPFLAGS += -I..
 

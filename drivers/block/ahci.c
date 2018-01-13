@@ -3,6 +3,8 @@
  * Author: Jason Jin<Jason.jin@freescale.com>
  *         Zhang Wei<wei.zhang@freescale.com>
  *
+ * Copyright (C) 2010-2011 Freescale Semiconductor, Inc.
+ *
  * See file CREDITS for list of people who contributed to this
  * project.
  *
@@ -390,7 +392,7 @@ static int ahci_port_start(u8 port)
 	 */
 	pp->cmd_slot = (struct ahci_cmd_hdr *)mem;
 	debug("cmd_slot = 0x%x\n", pp->cmd_slot);
-	mem += (AHCI_CMD_SLOT_SZ + 224);
+	mem += (AHCI_CMD_SLOT_SZ * AHCI_MAX_CMD_SLOT);
 
 	/*
 	 * Second item: Received-FIS area

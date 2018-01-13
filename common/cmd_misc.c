@@ -60,6 +60,65 @@ U_BOOT_CMD(
 );
 #endif
 
+#ifdef CONFIG_CMD_HALT
+extern void board_power_off(void);
+int do_halt (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+{
+    board_power_off();
+    return 0;
+}
+
+U_BOOT_CMD(
+    halt,   1,      1,  do_halt,
+    "halt board",
+);
+#endif
+
+#ifdef CONFIG_CMD_PANIC
+int do_panic (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+{
+    panic ("Can't continue");
+    return 0;
+}
+
+U_BOOT_CMD(
+    panic,  1,      1,  do_panic,
+    "panic halt",
+);
+#endif
+
+#if defined(CONFIG_CMD_FAIL) && defined(CONFIG_PMIC)
+extern int board_pmic_init(void);
+extern void sos (void);
+extern void ok (void);
+
+int do_pass (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+{
+    board_pmic_init();
+    while (1) {
+        ok();
+    }
+}
+
+U_BOOT_CMD(
+    pass,  1,      1,  do_pass,
+    "pass blink pass pattern on LED",
+);
+
+int do_fail (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+{
+    board_pmic_init();
+    while (1) {
+        sos();
+    }
+}
+
+U_BOOT_CMD(
+    fail,  1,      1,  do_fail,
+    "fail blink fail pattern on LED",
+);
+#endif
+
 U_BOOT_CMD(
 	sleep ,    2,    1,     do_sleep,
 	"delay execution for some time",

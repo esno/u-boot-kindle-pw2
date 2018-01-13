@@ -248,6 +248,7 @@ static int post_run_single (struct post_test *test,
 		if ((*test->test) (flags) != 0) {
 			post_log ("FAILED\n");
 			show_boot_progress (-32);
+			gd->flags |= GD_FLG_POSTWARN;
 			if (test_flags & POST_CRITICAL)
 				gd->flags |= GD_FLG_POSTFAIL;
 			if (test_flags & POST_STOP)
@@ -271,6 +272,8 @@ int post_run (char *name, int flags)
 {
 	unsigned int i;
 	int test_flags[POST_MAX_NUMBER];
+	int start = get_timer(0);
+	int ret = 0;
 
 	post_get_flags (test_flags);
 
@@ -310,8 +313,6 @@ int post_run (char *name, int flags)
 						 flags, i);
 			}
 		}
-
-		return 0;
 	} else {
 		for (i = 0; i < post_list_size; i++) {
 			if (strcmp (post_list[i].cmd, name) == 0)
@@ -320,13 +321,15 @@ int post_run (char *name, int flags)
 
 		if (i < post_list_size) {
 			WATCHDOG_RESET();
-			return post_run_single (post_list + i,
+			ret = post_run_single (post_list + i,
 						test_flags[i],
 						flags, i);
 		} else {
-			return -1;
+			ret = -1;
 		}
 	}
+	printf ("POST done in %ld ms\n", get_timer(start)/(CONFIG_SYS_HZ/1000));
+	return ret;
 }
 
 static int post_info_single (struct post_test *test, int full)
@@ -450,7 +453,6 @@ unsigned long post_time_ms (unsigned long base)
 #ifdef CONFIG_PPC
 	return (unsigned long)(get_ticks () / (get_tbclk () / CONFIG_SYS_HZ)) - base;
 #else
-#warning "Not implemented yet"
-	return 0; /* Not implemented yet */
+	return get_timer(base);
 #endif
 }

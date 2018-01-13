@@ -37,9 +37,6 @@
 #   define MAX_SPI_BYTES 32	/* Maximum number of bytes we can handle */
 #endif
 
-#ifndef CONFIG_DEFAULT_SPI_BUS
-#   define CONFIG_DEFAULT_SPI_BUS	0
-#endif
 #ifndef CONFIG_DEFAULT_SPI_MODE
 #   define CONFIG_DEFAULT_SPI_MODE	SPI_MODE_0
 #endif
@@ -47,6 +44,7 @@
 /*
  * Values from last command.
  */
+static unsigned int	bus;
 static unsigned int	device;
 static int   		bitlen;
 static uchar 		dout[MAX_SPI_BYTES];
@@ -56,7 +54,8 @@ static uchar 		din[MAX_SPI_BYTES];
  * SPI read/write
  *
  * Syntax:
- *   spi {dev} {num_bits} {dout}
+ *   spi {bus} {dev} {num_bits} {dout}
+ *     {bus} is the spi bus number
  *     {dev} is the device number for controlling chip select (see TBD)
  *     {num_bits} is the number of bits to send & receive (base 10)
  *     {dout} is a hexadecimal string of data to send
@@ -78,28 +77,30 @@ int do_spi (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 
 	if ((flag & CMD_FLAG_REPEAT) == 0)
 	{
-		if (argc >= 2)
-			device = simple_strtoul(argv[1], NULL, 10);
-		if (argc >= 3)
-			bitlen = simple_strtoul(argv[2], NULL, 10);
-		if (argc >= 4) {
-			cp = argv[3];
-			for(j = 0; *cp; j++, cp++) {
-				tmp = *cp - '0';
-				if(tmp > 9)
-					tmp -= ('A' - '0') - 10;
-				if(tmp > 15)
-					tmp -= ('a' - 'A');
-				if(tmp > 15) {
-					printf("Hex conversion error on %c, giving up.\n", *cp);
-					return 1;
-				}
-				if((j % 2) == 0)
-					dout[j / 2] = (tmp << 4);
-				else
-					dout[j / 2] |= tmp;
-			}
+	    if (argc >= 2)
+		bus = simple_strtoul(argv[1], NULL, 10);
+	    if (argc >= 3)
+		device = simple_strtoul(argv[2], NULL, 10);
+	    if (argc >= 4)
+		bitlen = simple_strtoul(argv[3], NULL, 10);
+	    if (argc >= 5) {
+		cp = argv[4];
+		for(j = 0; *cp; j++, cp++) {
+		    tmp = *cp - '0';
+		    if(tmp > 9)
+			tmp -= ('A' - '0') - 10;
+		    if(tmp > 15)
+			tmp -= ('a' - 'A');
+		    if(tmp > 15) {
+			printf("Hex conversion error on %c, giving up.\n", *cp);
+			return 1;
+		    }
+		    if((j % 2) == 0)
+			dout[j / 2] = (tmp << 4);
+		    else
+			dout[j / 2] |= tmp;
 		}
+	    }
 	}
 
 	if ((bitlen < 0) || (bitlen >  (MAX_SPI_BYTES * 8))) {
@@ -107,8 +108,7 @@ int do_spi (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		return 1;
 	}
 
-	/* FIXME: Make these parameters run-time configurable */
-	slave = spi_setup_slave(CONFIG_DEFAULT_SPI_BUS, device, 1000000,
+	slave = spi_setup_slave(bus, device, 1000000,
 			CONFIG_DEFAULT_SPI_MODE);
 	if (!slave) {
 		printf("Invalid device %d, giving up.\n", device);
@@ -139,7 +139,8 @@ int do_spi (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 U_BOOT_CMD(
 	sspi,	5,	1,	do_spi,
 	"SPI utility commands",
-	"<device> <bit_len> <dout> - Send <bit_len> bits from <dout> out the SPI\n"
+	"<bus> <device> <mode> <bit_len> <dout> - Send <bit_len> bits from <dout> out the SPI\n"
+	"<bus>  - Identifies the bus of the device\n"
 	"<device>  - Identifies the chip select of the device\n"
 	"<bit_len> - Number of bits to send (base 10)\n"
 	"<dout>    - Hexadecimal string that gets sent"

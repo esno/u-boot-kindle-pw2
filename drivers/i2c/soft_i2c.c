@@ -43,6 +43,9 @@
 #if defined(CONFIG_MPC852T) || defined(CONFIG_MPC866)
 #include <asm/io.h>
 #endif
+#ifdef CONFIG_WARIO_WOODY
+#include <asm/arch/board-mx6sl_wario.h>
+#endif
 #include <i2c.h>
 
 /* #define	DEBUG_I2C	*/
@@ -216,12 +219,12 @@ static int write_byte(uchar data)
 /*
  * Functions for multiple I2C bus handling
  */
-unsigned int i2c_get_bus_num(void)
+unsigned int soft_i2c_get_bus_num(void)
 {
 	return i2c_bus_num;
 }
 
-int i2c_set_bus_num(unsigned int bus)
+int soft_i2c_set_bus_num(unsigned int bus)
 {
 #if defined(CONFIG_I2C_MUX)
 	if (bus < CONFIG_SYS_MAX_I2C_BUS) {
@@ -281,7 +284,7 @@ static uchar read_byte(int ack)
 /*-----------------------------------------------------------------------
  * Initialization
  */
-void i2c_init (int speed, int slaveaddr)
+void soft_i2c_init (int speed, int slaveaddr)
 {
 #if defined(CONFIG_SYS_I2C_INIT_BOARD)
 	/* call board specific i2c bus reset routine before accessing the   */
@@ -304,7 +307,7 @@ void i2c_init (int speed, int slaveaddr)
  * completion of EEPROM writes since the chip stops responding until
  * the write completes (typically 10mSec).
  */
-int i2c_probe(uchar addr)
+int soft_i2c_probe(uchar addr)
 {
 	int rc;
 
@@ -322,10 +325,10 @@ int i2c_probe(uchar addr)
 /*-----------------------------------------------------------------------
  * Read bytes
  */
-int  i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
+int  soft_i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
 {
 	int shift;
-	PRINTD("i2c_read: chip %02X addr %02X alen %d buffer %p len %d\n",
+	PRINTD("soft_i2c_read: chip %02X addr %02X alen %d buffer %p len %d\n",
 		chip, addr, alen, buffer, len);
 
 #ifdef CONFIG_SYS_I2C_EEPROM_ADDR_OVERFLOW
@@ -342,7 +345,7 @@ int  i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
 	 */
 	chip |= ((addr >> (alen * 8)) & CONFIG_SYS_I2C_EEPROM_ADDR_OVERFLOW);
 
-	PRINTD("i2c_read: fix addr_overflow: chip %02X addr %02X\n",
+	PRINTD("soft_i2c_read: fix addr_overflow: chip %02X addr %02X\n",
 		chip, addr);
 #endif
 
@@ -356,13 +359,13 @@ int  i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
 	if(alen > 0) {
 		if(write_byte(chip << 1)) {	/* write cycle */
 			send_stop();
-			PRINTD("i2c_read, no chip responded %02X\n", chip);
+			PRINTD("soft_i2c_read, no chip responded %02X\n", chip);
 			return(1);
 		}
 		shift = (alen-1) * 8;
 		while(alen-- > 0) {
 			if(write_byte(addr >> shift)) {
-				PRINTD("i2c_read, address not <ACK>ed\n");
+				PRINTD("soft_i2c_read, address not <ACK>ed\n");
 				return(1);
 			}
 			shift -= 8;
@@ -396,23 +399,23 @@ int  i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
 /*-----------------------------------------------------------------------
  * Write bytes
  */
-int  i2c_write(uchar chip, uint addr, int alen, uchar *buffer, int len)
+int  soft_i2c_write(uchar chip, uint addr, int alen, uchar *buffer, int len)
 {
 	int shift, failures = 0;
 
-	PRINTD("i2c_write: chip %02X addr %02X alen %d buffer %p len %d\n",
+	PRINTD("soft_i2c_write: chip %02X addr %02X alen %d buffer %p len %d\n",
 		chip, addr, alen, buffer, len);
 
 	send_start();
 	if(write_byte(chip << 1)) {	/* write cycle */
 		send_stop();
-		PRINTD("i2c_write, no chip responded %02X\n", chip);
+		PRINTD("soft_i2c_write, no chip responded %02X\n", chip);
 		return(1);
 	}
 	shift = (alen-1) * 8;
 	while(alen-- > 0) {
 		if(write_byte(addr >> shift)) {
-			PRINTD("i2c_write, address not <ACK>ed\n");
+			PRINTD("soft_i2c_write, address not <ACK>ed\n");
 			return(1);
 		}
 		shift -= 8;

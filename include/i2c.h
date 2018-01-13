@@ -209,8 +209,10 @@ int i2c_set_bus_num(unsigned int bus);
  *
  *  Returns index of currently active I2C bus.  Zero-based.
  */
-
 unsigned int i2c_get_bus_num(void);
+
+
+int i2c_raw_read(uchar chip, uchar *buf, int len);
 
 /*
  * i2c_set_bus_speed:

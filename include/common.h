@@ -112,6 +112,10 @@ typedef volatile unsigned char	vu_char;
 #include <flash.h>
 #include <image.h>
 
+#if defined(CONFIG_HANG_FEEDBACK)
+void hang_feedback (void);
+#endif
+
 #ifdef	DEBUG
 #define debug(fmt,args...)	printf (fmt ,##args)
 #define debugX(level,fmt,args...) if (DEBUG>=level) printf(fmt,##args);
@@ -313,6 +317,9 @@ long	get_ram_size  (volatile long *, long);
 /* $(BOARD)/$(BOARD).c */
 void	reset_phy     (void);
 void	fdc_hw_init   (void);
+int	board_is_rtc_wakeup(int alarm_number);
+int	board_is_usb_wakeup(void);
+int	board_is_hall_closed(void);
 
 /* $(BOARD)/eeprom.c */
 void eeprom_init  (void);
@@ -718,5 +725,7 @@ int cpu_release(int nr, int argc, char *argv[]);
 
 #define ALIGN(x,a)		__ALIGN_MASK((x),(typeof(x))(a)-1)
 #define __ALIGN_MASK(x,mask)	(((x)+(mask))&~(mask))
+
+#define TRACELINE() printf("(%u) %s (%d)\n", get_timer_masked(), __FILE__, __LINE__)
 
 #endif	/* __COMMON_H_ */

@@ -43,7 +43,7 @@
 
 int i2c_post_test (int flags)
 {
-	unsigned int i;
+	unsigned int i, k, bus;
 	unsigned int good = 0;
 #ifdef I2C_ADDR_LIST
 	unsigned int bad  = 0;
@@ -52,26 +52,31 @@ int i2c_post_test (int flags)
 	unsigned char i2c_miss_list[] = I2C_ADDR_LIST;
 #endif
 
-	for (i = 0; i < 128; i++) {
-		if (i2c_probe (i) == 0) {
-#ifndef	I2C_ADDR_LIST
-			good++;
-#else	/* I2C_ADDR_LIST */
-			for (j=0; j<sizeof(i2c_addr_list); ++j) {
-				if (i == i2c_addr_list[j]) {
-					good++;
-					i2c_miss_list[j] = 0xFF;
-					break;
-				}
-			}
-			if (j == sizeof(i2c_addr_list)) {
-				bad++;
-				post_log ("I2C: addr %02X not expected\n",
-						i);
-			}
-#endif	/* I2C_ADDR_LIST */
-		}
+    bus = i2c_get_bus_num();
+	for (k = 0; k < 3; k++) {
+	    i2c_set_bus_num(k);
+	    for (i = 0; i < 128; i++) {
+	        if (i2c_probe (i) == 0) {
+#ifndef I2C_ADDR_LIST
+	            good++;
+#else   /* I2C_ADDR_LIST */
+	            for (j=0; j<sizeof(i2c_addr_list); ++j) {
+	                if (i == i2c_addr_list[j]) {
+	                    good++;
+	                    i2c_miss_list[j] = 0xFF;
+	                    break;
+	                }
+	            }
+	            if (j == sizeof(i2c_addr_list)) {
+	                bad++;
+	                post_log ("I2C: addr %02X not expected\n",
+	                        i);
+	            }
+#endif  /* I2C_ADDR_LIST */
+	        }
+	    }
 	}
+    i2c_set_bus_num(bus);
 
 #ifndef	I2C_ADDR_LIST
 	return good > 0 ? 0 : -1;

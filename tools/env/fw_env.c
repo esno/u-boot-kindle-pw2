@@ -205,6 +205,9 @@ static char default_environment[] = {
 #ifdef  CONFIG_EXTRA_ENV_SETTINGS
 	CONFIG_EXTRA_ENV_SETTINGS
 #endif
+#if	defined(CONFIG_CMD_FB) && defined(CONFIG_EXTRA_FB_ENV_SETTINGS)
+	CONFIG_EXTRA_FB_ENV_SETTINGS
+#endif
 	"\0"		/* Termimate struct environment data with 2 NULs */
 };
 

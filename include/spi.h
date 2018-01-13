@@ -25,6 +25,7 @@
 #define _SPI_H_
 
 /* Controller-specific definitions: */
+typedef void (*spi_chipsel_type)(int cs);
 
 /* CONFIG_HARD_SPI triggers SPI bus initialization in PowerPC */
 #ifdef CONFIG_MPC8XXX_SPI

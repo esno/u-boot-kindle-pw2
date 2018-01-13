@@ -42,6 +42,10 @@ typedef	struct	global_data {
 	unsigned long	env_addr;	/* Address  of Environment struct */
 	unsigned long	env_valid;	/* Checksum of Environment valid? */
 	unsigned long	fb_base;	/* base address of frame buffer */
+#if defined(CONFIG_POST) || defined(CONFIG_LOGBUFFER)
+	unsigned long post_log_word;	/* Record POST activities */
+	unsigned long post_init_f_time;	/* When post_init_f started */
+#endif
 #ifdef CONFIG_VFD
 	unsigned char	vfd_type;	/* display type */
 #endif
@@ -64,6 +68,9 @@ typedef	struct	global_data {
 #define	GD_FLG_POSTSTOP	0x00010		/* POST seqeunce aborted		*/
 #define	GD_FLG_LOGINIT	0x00020		/* Log Buffer has been initialized	*/
 #define GD_FLG_DISABLE_CONSOLE	0x00040		/* Disable console (in & out)	 */
+#define	GD_FLG_POSTWARN	0x00080		/* Non-Critical POST test failed		*/
+#define	GD_FLG_QUICKBOOT	0x00100		/* Bootmode is quickboot	*/
+#define GD_FLG_CRIT_BATT        0x00200 /* Battery at Critical Level            */
 
 #define DECLARE_GLOBAL_DATA_PTR     register volatile gd_t *gd asm ("r8")
 

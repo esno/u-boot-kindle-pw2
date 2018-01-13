@@ -9,6 +9,7 @@
  * Copyright (c) 2003	Richard Woodruff <r-woodruff2@ti.com>
  * Copyright (c) 2003	Kshitij <kshitij@ti.com>
  * Copyright (c) 2006-2008 Syed Mohammed Khasim <x0khasim@ti.com>
+ * Copyright (c) 2009 Freescale Semiconductor, Inc.
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -53,6 +54,7 @@ _pad:			.word 0x12345678 /* now 16*4=64 */
 .global _end_vect
 _end_vect:
 
+.skip 16, 0
 	.balignl 16,0xdeadbeef
 /*************************************************************************
  *
@@ -160,6 +162,7 @@ stack_setup:
 	ldr	r0, _TEXT_BASE		@ upper 128 KiB: relocated uboot
 	sub	r0, r0, #CONFIG_SYS_MALLOC_LEN @ malloc area
 	sub	r0, r0, #CONFIG_SYS_GBL_DATA_SIZE @ bdinfo
+	sub	r0, r0, #4		   /* CONFIG_SYS_POST_WORD_ADDR         */
 #ifdef CONFIG_USE_IRQ
 	sub	r0, r0, #(CONFIG_STACKSIZE_IRQ + CONFIG_STACKSIZE_FIQ)
 #endif
@@ -177,6 +180,13 @@ clbss_l:
 	add	r0, r0, #4		@ increment clear index pointer
 	bne	clbss_l			@ keep clearing till at end
 
+/*
+ * For Wario, we do not use DCD to initialize DDR. MMDC is uninitialized now.
+ * We cannot put TTB in DDR. MMU init done after dram_init().
+ */
+#if defined(CONFIG_ARCH_MMU) && !defined(CONFIG_WARIO)
+	bl board_mmu_init
+#endif
 	ldr	pc, _start_armboot	@ jump to C code
 
 _start_armboot: .word start_armboot
@@ -459,10 +469,7 @@ inval_loop1:
 	mcr	p15, 2, r10, c0, c0, 0		@ select current cache level
 						@ in cssr
 	mov	r2, #0				@ operand for mcr SBZ
-	mcr	p15, 0, r2, c7, c5, 4		@ flush prefetch buffer to
-						@ sych the new cssr&csidr,
-						@ with armv7 this is 'isb',
-						@ but we compile with armv5
+	isb
 	mrc	p15, 1, r1, c0, c0, 0		@ read the new csidr
 	and	r2, r1, #7			@ extract the length of the
 						@ cache lines
@@ -482,7 +489,7 @@ inval_loop3:
 	orr	r11, r10, r9, lsl r5		@ factor way and cache number
 						@ into r11
 	orr	r11, r11, r7, lsl r2		@ factor index number into r11
-	mcr	p15, 0, r11, c7, c6, 2		@ invalidate by set/way
+	mcr	p15, 0, r11, c7, c14, 2		@ invalidate by set/way
 	subs	r9, r9, #1			@ decrement the way
 	bge	inval_loop3
 	subs	r7, r7, #1			@ decrement the index
@@ -495,8 +502,5 @@ finished_inval:
 	mov	r10, #0				@ swith back to cache level 0
 	mcr	p15, 2, r10, c0, c0, 0		@ select current cache level
 						@ in cssr
-	mcr	p15, 0, r10, c7, c5, 4		@ flush prefetch buffer,
-						@ with armv7 this is 'isb',
-						@ but we compile with armv5
-
+	isb
 	ldmfd	r13!, {r0 - r5, r7, r9 - r12, pc}

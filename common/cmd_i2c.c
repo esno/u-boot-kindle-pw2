@@ -83,6 +83,10 @@
 #include <malloc.h>
 #include <asm/byteorder.h>
 
+#ifdef CONFIG_WARIO_WOODY
+#include <asm/arch/board-mx6sl_wario.h>
+#endif
+
 /* Display values from last command.
  * Memory modify remembered values are different from display memory.
  */
@@ -223,26 +227,53 @@ int do_i2c_md ( cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 
 		linebytes = (nbytes > DISP_LINE_LEN) ? DISP_LINE_LEN : nbytes;
 
-		if (i2c_read(chip, addr, alen, linebuf, linebytes) != 0)
-			puts ("Error reading the chip.\n");
-		else {
-			printf("%04x:", addr);
-			cp = linebuf;
-			for (j=0; j<linebytes; j++) {
-				printf(" %02x", *cp++);
-				addr++;
+#ifdef CONFIG_WARIO_WOODY
+		if (chip == SODA_CHG_I2C_ADDR || chip == SODA_FG_I2C_ADDR || chip == SODA_EEPROM_I2C_ADDR) {
+			if (soft_i2c_read(chip, addr, alen, linebuf, linebytes) != 0)
+				puts ("Error reading the chip (soft_i2c).\n");
+			else {
+				printf("%04x:", addr);
+				cp = linebuf;
+				for (j=0; j<linebytes; j++) {
+					printf(" %02x", *cp++);
+					addr++;
+				}
+				puts ("    ");
+				cp = linebuf;
+				for (j=0; j<linebytes; j++) {
+					if ((*cp < 0x20) || (*cp > 0x7e))
+						puts (".");
+					else
+						printf("%c", *cp);
+					cp++;
+				}
+				putc ('\n');
 			}
-			puts ("    ");
-			cp = linebuf;
-			for (j=0; j<linebytes; j++) {
-				if ((*cp < 0x20) || (*cp > 0x7e))
-					puts (".");
-				else
-					printf("%c", *cp);
-				cp++;
+		} else {
+#endif
+			if (i2c_read(chip, addr, alen, linebuf, linebytes) != 0)
+				puts ("Error reading the chip.\n");
+			else {
+				printf("%04x:", addr);
+				cp = linebuf;
+				for (j=0; j<linebytes; j++) {
+					printf(" %02x", *cp++);
+					addr++;
+				}
+				puts ("    ");
+				cp = linebuf;
+				for (j=0; j<linebytes; j++) {
+					if ((*cp < 0x20) || (*cp > 0x7e))
+						puts (".");
+					else
+						printf("%c", *cp);
+					cp++;
+				}
+				putc ('\n');
 			}
-			putc ('\n');
+#ifdef CONFIG_WARIO_WOODY
 		}
+#endif
 		nbytes -= linebytes;
 	} while (nbytes > 0);
 
@@ -310,8 +341,18 @@ int do_i2c_mw ( cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		count = 1;
 
 	while (count-- > 0) {
-		if (i2c_write(chip, addr++, alen, &byte, 1) != 0)
-			puts ("Error writing the chip.\n");
+#ifdef CONFIG_WARIO_WOODY
+		if (chip == SODA_CHG_I2C_ADDR || chip == SODA_EEPROM_I2C_ADDR) 
+			if (soft_i2c_write(chip, addr++, alen, &byte, 1) != 0) 
+				puts ("Error writing the chip (soft_i2c).\n");
+		else if (chip == SODA_FG_I2C_ADDR)
+			if (soft_i2c_write(chip, addr++, alen, &byte, 2) != 0) 
+				puts ("Error writing the chip (soft_i2c).\n");
+		else 
+#endif
+			if (i2c_write(chip, addr++, alen, &byte, 1) != 0)
+				puts ("Error writing the chip.\n");
+		
 		/*
 		 * Wait for the write to complete.  The write can take
 		 * up to 10mSec (we allow a little more time).

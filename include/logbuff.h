@@ -26,7 +26,7 @@
 #ifdef CONFIG_LOGBUFFER
 
 #define LOGBUFF_MAGIC	0xc0de4ced	/* Forced by code, eh!	*/
-#define LOGBUFF_LEN	(16384)	/* Must be 16k right now */
+#define LOGBUFF_LEN	(4096)	/* Must be power of 2 right now */
 #define LOGBUFF_MASK	(LOGBUFF_LEN-1)
 #define LOGBUFF_OVERHEAD (4096) /* Logbuffer overhead for extra info */
 #define LOGBUFF_RESERVE (LOGBUFF_LEN+LOGBUFF_OVERHEAD)

@@ -103,8 +103,8 @@ typedef int boot_os_fn (int flag, int argc, char *argv[],
 			bootm_headers_t *images); /* pointers to os/initrd/fdt */
 
 #define CONFIG_BOOTM_LINUX 1
-#define CONFIG_BOOTM_NETBSD 1
-#define CONFIG_BOOTM_RTEMS 1
+//#define CONFIG_BOOTM_NETBSD 1
+//#define CONFIG_BOOTM_RTEMS 1
 
 #ifdef CONFIG_BOOTM_LINUX
 extern boot_os_fn do_bootm_linux;
@@ -328,7 +328,9 @@ static int bootm_load_os(image_info_t os, ulong *load_end, int boot_progress)
 	ulong blob_end = os.end;
 	ulong image_start = os.image_start;
 	ulong image_len = os.image_len;
+#if defined (CONFIG_GZIP) || defined(CONFIG_BZIP2) || defined (CONFIG_LZMA)
 	uint unc_len = CONFIG_SYS_BOOTM_LEN;
+#endif
 
 	const char *type_name = genimg_get_type_name (os.type);
 
@@ -347,6 +349,7 @@ static int bootm_load_os(image_info_t os, ulong *load_end, int boot_progress)
 		*load_end = load + image_len;
 		puts("OK\n");
 		break;
+#ifdef CONFIG_GZIP
 	case IH_COMP_GZIP:
 		printf ("   Uncompressing %s ... ", type_name);
 		if (gunzip ((void *)load, unc_len,
@@ -360,6 +363,7 @@ static int bootm_load_os(image_info_t os, ulong *load_end, int boot_progress)
 
 		*load_end = load + image_len;
 		break;
+#endif
 #ifdef CONFIG_BZIP2
 	case IH_COMP_BZIP2:
 		printf ("   Uncompressing %s ... ", type_name);
@@ -712,6 +716,13 @@ static image_header_t *image_get_kernel (ulong img_addr, int verify)
 		show_boot_progress (-2);
 		return NULL;
 	}
+
+#if defined(CONFIG_MX51_BBG) || defined(CONFIG_MX51_3DS)
+	if (image_get_load(hdr) < 0x90000000)
+		image_set_load(hdr, image_get_load(hdr)+0x20000000);
+	if (image_get_ep(hdr) < 0x90000000)
+		image_set_ep(hdr, image_get_ep(hdr)+0x20000000);
+#endif
 
 	show_boot_progress (3);
 	image_print_contents (hdr);

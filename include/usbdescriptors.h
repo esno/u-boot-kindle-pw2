@@ -201,6 +201,19 @@ struct usb_endpoint_descriptor {
 	u8 bInterval;
 } __attribute__ ((packed));
 
+struct usb_qualifier_descriptor {
+	u8  bLength;
+	u8  bDescriptorType;
+
+	u16 bcdUSB;
+	u8  bDeviceClass;
+	u8  bDeviceSubClass;
+	u8  bDeviceProtocol;
+	u8  bMaxPacketSize0;
+	u8  bNumConfigurations;
+	u8  bRESERVED;
+} __attribute__ ((packed));
+
 struct usb_interface_descriptor {
 	u8 bLength;
 	u8 bDescriptorType;	/* 0x04 */

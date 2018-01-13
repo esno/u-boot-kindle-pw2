@@ -4,7 +4,9 @@
  *
  * (C) Copyright 2001 Sysgo Real-Time Solutions, GmbH <www.elinos.com>
  * Andreas Heppel <aheppel@sysgo.de>
-
+ *
+ * Copyright (C) 2012 Freescale Semiconductor, Inc.
+ *
  * See file CREDITS for list of people who contributed to this
  * project.
  *
@@ -127,6 +129,9 @@ uchar default_environment[] = {
 #ifdef	CONFIG_LOADADDR
 	"loadaddr="	MK_STR(CONFIG_LOADADDR)		"\0"
 #endif
+#ifdef CONFIG_RD_LOADADDR
+	"rd_loadaddr="  MK_STR(CONFIG_RD_LOADADDR)	"\0"
+#endif
 #ifdef  CONFIG_CLOCKS_IN_MHZ
 	"clocks_in_mhz=1\0"
 #endif
@@ -136,12 +141,26 @@ uchar default_environment[] = {
 #ifdef  CONFIG_EXTRA_ENV_SETTINGS
 	CONFIG_EXTRA_ENV_SETTINGS
 #endif
+#if	defined(CONFIG_CMD_FB) && defined(CONFIG_EXTRA_FB_ENV_SETTINGS)
+	CONFIG_EXTRA_FB_ENV_SETTINGS
+#endif
 	"\0"
 };
+
+#if defined(CONFIG_ENV_IS_IN_NAND)		/* Environment is in Nand Flash */ \
+	|| defined(CONFIG_ENV_IS_IN_SPI_FLASH) \
+	|| defined(CONFIG_ENV_IS_IN_MMC)
+int default_environment_size = sizeof(default_environment);
+#endif
 
 void env_crc_update (void)
 {
 	env_ptr->crc = crc32(0, env_ptr->data, ENV_SIZE);
+}
+
+void env_crc_destroy(void)
+{
+	env_ptr->crc += 1;
 }
 
 static uchar env_get_char_init (int index)

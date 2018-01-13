@@ -67,7 +67,7 @@ include $(TOPDIR)/config.mk
 
 # Generated executable files
 BIN_FILES-$(CONFIG_CMD_LOADS) += img2srec$(SFX)
-BIN_FILES-y += mkimage$(SFX)
+#BIN_FILES-y += mkimage$(SFX)
 BIN_FILES-$(CONFIG_ENV_IS_EMBEDDED) += envcrc$(SFX)
 BIN_FILES-$(CONFIG_ENV_IS_IN_DATAFLASH) += envcrc$(SFX)
 BIN_FILES-$(CONFIG_ENV_IS_IN_EEPROM) += envcrc$(SFX)
@@ -82,6 +82,7 @@ BIN_FILES-$(CONFIG_LCD_LOGO) += bmp_logo$(SFX)
 BIN_FILES-$(CONFIG_VIDEO_LOGO) += bmp_logo$(SFX)
 BIN_FILES-$(CONFIG_INCA_IP) += inca-swap-bytes$(SFX)
 BIN_FILES-$(CONFIG_NETCONSOLE) += ncb$(SFX)
+BIN_FILES-$(CONFIG_TAGCRC) += tagcrc$(SFX)
 
 # Source files which exist outside the tools directory
 EXT_OBJ_FILES-y += common/env_embedded.o
@@ -92,7 +93,7 @@ EXT_OBJ_FILES-y += common/image.o
 
 # Source files located in the tools directory
 OBJ_FILES-$(CONFIG_CMD_LOADS) += img2srec.o
-OBJ_FILES-y += mkimage.o
+#OBJ_FILES-y += mkimage.o
 OBJ_FILES-$(CONFIG_ENV_IS_EMBEDDED) += envcrc.o
 OBJ_FILES-$(CONFIG_SHA1_CHECK_UB_IMG) += ubsha1.o
 OBJ_FILES-$(CONFIG_CMD_NET) += gen_eth_addr.o
@@ -150,6 +151,11 @@ CPPFLAGS   = -idirafter $(SRCTREE)/include \
 		-D__KERNEL_STRICT_NAMES
 CFLAGS     = $(HOSTCFLAGS) $(CPPFLAGS) -O
 
+ifneq ($(BOOT_MEDIA),)
+        BOOT_MEDIA_MACRO := BOOT_MEDIA_$(shell echo $(BOOT_MEDIA) | tr '[a-z]' '[A-Z]')
+        CPPFLAGS += -D$(BOOT_MEDIA_MACRO)
+endif
+
 # No -pedantic switch to avoid libfdt compilation warnings
 FIT_CFLAGS = -Wall $(CPPFLAGS) -O
 
@@ -162,6 +168,9 @@ all:	$(obj).depend $(BINS) $(LOGO-y) subdirs
 
 $(obj)envcrc$(SFX):	$(obj)envcrc.o $(obj)crc32.o $(obj)env_embedded.o $(obj)sha1.o
 	$(CC) $(CFLAGS) -o $@ $^
+
+$(obj)tagcrc$(SFX):	$(obj)tagcrc.o $(obj)crc32.o
+		$(CC) $(CFLAGS) -o $@ $^
 
 $(obj)ubsha1$(SFX):	$(obj)ubsha1.o $(obj)sha1.o $(obj)os_support.o
 	$(CC) $(CFLAGS) -o $@ $^

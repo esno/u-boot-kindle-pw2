@@ -35,6 +35,10 @@
 #include <dataflash.h>
 #endif
 
+#ifdef CONFIG_MMC_BOOTFLASH
+#include <mmc.h>
+#endif
+
 #ifdef CONFIG_LOGBUFFER
 #include <logbuff.h>
 #endif
@@ -648,6 +652,17 @@ int genimg_get_format (void *img_addr)
 	return format;
 }
 
+#ifdef CONFIG_MMC_BOOTFLASH
+static int addr_mmc(ulong address) {
+
+    if ((address & 0xFF000000) == 0) {
+	return 1;
+    }
+
+    return 0;
+}
+#endif
+
 /**
  * genimg_get_image - get image from special storage (if necessary)
  * @img_addr: image start address
@@ -661,6 +676,7 @@ int genimg_get_format (void *img_addr)
 ulong genimg_get_image (ulong img_addr)
 {
 	ulong ram_addr = img_addr;
+        struct mmc *mmc;
 
 #ifdef CONFIG_HAS_DATAFLASH
 	ulong h_size, d_size;
@@ -711,6 +727,29 @@ ulong genimg_get_image (ulong img_addr)
 
 	}
 #endif /* CONFIG_HAS_DATAFLASH */
+
+#ifdef CONFIG_MMC_BOOTFLASH
+
+	if (addr_mmc(img_addr)) {
+
+	    ram_addr = CONFIG_SYS_LOAD_ADDR;
+	
+            mmc = find_mmc_device(CONFIG_MMC_BOOTFLASH);
+            if (!mmc) return 0;
+            if (mmc->part_num != 0) {
+                    int     retry = 5;
+                    while (retry-- > 0 && mmc_switch_partition(mmc, 0, 0) != 0);
+                    if (retry <= 0) {
+                            printf("Failed to switch to partition 0");
+                            return 0;
+                    }
+            }
+	    if (mmc_read(CONFIG_MMC_BOOTFLASH, img_addr, (unsigned char *) ram_addr, CONFIG_MMC_BOOTFLASH_SIZE)) {
+		printf("ERROR: couldn't read boot image from flash address 0x%x\n", CONFIG_MMC_BOOTFLASH_ADDR);
+	    }
+	}
+
+#endif /* CONFIG_MMC_BOOTFLASH */
 
 	return ram_addr;
 }

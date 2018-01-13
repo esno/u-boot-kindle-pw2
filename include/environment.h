@@ -2,6 +2,8 @@
  * (C) Copyright 2002
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
+ * Copyright (C) 2012 Freescale Semiconductor, Inc.
+ *
  * See file CREDITS for list of people who contributed to this
  * project.
  *
@@ -96,7 +98,30 @@
 # endif
 #endif /* CONFIG_ENV_IS_IN_MG_DISK */
 
+#if defined(CONFIG_ENV_IS_IN_MMC)
+# ifndef CONFIG_ENV_OFFSET
+#  error "Need to define CONFIG_ENV_OFFSET when using CONFIG_ENV_IS_IN_MMC"
+# endif
+# ifndef CONFIG_ENV_ADDR
+#  define CONFIG_ENV_ADDR	(CONFIG_ENV_OFFSET)
+# endif
+# ifndef CONFIG_ENV_OFFSET
+#  define CONFIG_ENV_OFFSET (CONFIG_ENV_ADDR)
+# endif
+# ifdef CONFIG_ENV_OFFSET_REDUND
+#  define CONFIG_SYS_REDUNDAND_ENVIRONMENT
+# endif
+# ifdef CONFIG_ENV_IS_EMBEDDED
+#  define ENV_IS_EMBEDDED	1
+# endif
+#endif /* CONFIG_ENV_IS_IN_MMC */
+
 #include "compiler.h"
+#ifdef USE_HOSTCC
+# include <stdint.h>
+#else
+# include <linux/types.h>
+#endif
 
 #ifdef CONFIG_SYS_REDUNDAND_ENVIRONMENT
 # define ENV_HEADER_SIZE	(sizeof(uint32_t) + 1)
@@ -124,6 +149,8 @@ unsigned char env_get_char_memory (int index);
 
 /* Function that updates CRC of the enironment */
 void env_crc_update (void);
+/* Function that destroys CRC of the environment */
+void env_crc_destroy(void);
 
 /* [re]set to the default environment */
 void set_default_env(void);

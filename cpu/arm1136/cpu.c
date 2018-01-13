@@ -34,6 +34,7 @@
 #include <common.h>
 #include <command.h>
 #include <asm/system.h>
+#include <asm/cache-cp15.h>
 
 static void cache_flush(void);
 
@@ -63,6 +64,11 @@ int cleanup_before_linux (void)
 	dcache_disable();
 	/* flush I/D-cache */
 	cache_flush();
+
+/*Workaround to enable L2CC during kernel decompressing*/
+#ifdef fixup_before_linux
+	fixup_before_linux;
+#endif
 
 	return 0;
 }

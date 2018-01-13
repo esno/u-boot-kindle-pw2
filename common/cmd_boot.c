@@ -27,6 +27,7 @@
 #include <common.h>
 #include <command.h>
 #include <net.h>
+#include <mmc.h>
 
 /* Allow ports to override the default behavior */
 __attribute__((weak))
@@ -76,3 +77,70 @@ U_BOOT_CMD(
 	"Perform RESET of the CPU",
 	""
 );
+
+#ifdef CONFIG_CMD_BIST
+int do_bist (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+{
+	int err;
+	int i, ret;
+	char *cmd = (char *) CONFIG_BISTCMD_LOCATION;
+
+#if defined(CONFIG_BOOT_PARTITION_ACCESS) && defined(CONFIG_BOOT_FROM_PARTITION)
+	struct mmc *mmc;
+
+	mmc = find_mmc_device(CONFIG_MMC_BOOTFLASH);
+	if (mmc == NULL) {
+	    printf("Error: Couldn't find flash device");
+	    return -1;
+	}
+ 
+	if (!IS_SD(mmc) && mmc_switch_partition(mmc, CONFIG_BOOT_FROM_PARTITION, 0) < 0) {
+	    printf("ERROR: couldn't switch to boot partition\n");
+	    return -1;
+	}
+#endif
+	err = mmc_read(CONFIG_MMC_BOOTFLASH, \
+				   CONFIG_MMC_BIST_ADDR, \
+				   (unsigned char *) CONFIG_BISTADDR, \
+				   CONFIG_MMC_BIST_SIZE);
+	if (err) {
+		printf("ERROR: couldn't read bist image from flash address 0x%x\n", \
+			   CONFIG_MMC_BIST_ADDR);
+		return err;
+	}
+
+#if defined(CONFIG_BOOT_PARTITION_ACCESS) && defined(CONFIG_BOOT_FROM_PARTITION)
+	if (!IS_SD(mmc) && mmc_switch_partition(mmc, 0, 0) < 0) {
+	    printf("ERROR: couldn't switch back to user partition\n");
+	}
+#endif
+
+	cmd[0] = CONFIG_BISTCMD_MAGIC;
+	cmd[1] = 0;
+
+	/* copy cmd arguments to saved mem location */
+	cmd = &(cmd[1]);	    
+	for (i = 1; i < argc; i++) {
+	    ret = sprintf(cmd, "%s ", argv[i]);
+	    if (ret > 0) {
+		cmd += ret;
+	    } else {
+		break;
+	    }
+	}
+
+	/* null terminate */
+	cmd[0] = 0;
+	cache_flush();
+	err = do_go_exec ((void *)(CONFIG_BISTADDR), argc - 1, argv + 1);
+	printf ("## Application terminated, rc = 0x%X\n", err);
+
+	return err;
+}
+
+U_BOOT_CMD(
+	bist, CONFIG_SYS_MAXARGS, 0,	do_bist,
+	"start Built In Self Test",
+	""
+);
+#endif

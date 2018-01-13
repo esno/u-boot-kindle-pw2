@@ -31,6 +31,7 @@
 
 #include <malloc.h>
 #include <usbdevice.h>
+#include <usb_defs.h>
 
 #define MAX_INTERFACES 2
 
@@ -144,12 +145,21 @@ struct usb_string_descriptor *usbd_get_string (__u8 index)
  * Get specifed device configuration. Index should be bConfigurationValue-1.
  */
 static struct usb_configuration_instance *usbd_device_configuration_instance (struct usb_device_instance *device,
-		unsigned int port, unsigned int configuration)
+									      unsigned int port, 
+									      unsigned int speed, 
+									      int configuration)
 {
-	if (configuration >= device->configurations)
-		return NULL;
+    struct usb_configuration_instance *array;
 
-	return device->configuration_instance_array + configuration;
+    if (configuration >= device->configurations)
+	return NULL;
+
+    /* choose correct config instance based on connect speed */
+    array = (speed == USB_SPEED_HIGH) ? 
+	device->hs_configuration_instance_array : 
+	device->fs_configuration_instance_array;
+
+    return array + configuration;
 }
 
 
@@ -161,11 +171,11 @@ static struct usb_configuration_instance *usbd_device_configuration_instance (st
  *
  * Return the specified interface descriptor for the specified device.
  */
-struct usb_interface_instance *usbd_device_interface_instance (struct usb_device_instance *device, int port, int configuration, int interface)
+struct usb_interface_instance *usbd_device_interface_instance (struct usb_device_instance *device, int port, int speed, int configuration, int interface)
 {
 	struct usb_configuration_instance *configuration_instance;
 
-	if ((configuration_instance = usbd_device_configuration_instance (device, port, configuration)) == NULL) {
+	if ((configuration_instance = usbd_device_configuration_instance (device, port, speed, configuration)) == NULL) {
 		return NULL;
 	}
 	if (interface >= configuration_instance->interfaces) {
@@ -183,11 +193,11 @@ struct usb_interface_instance *usbd_device_interface_instance (struct usb_device
  *
  * Return the specified alternate descriptor for the specified device.
  */
-struct usb_alternate_instance *usbd_device_alternate_instance (struct usb_device_instance *device, int port, int configuration, int interface, int alternate)
+struct usb_alternate_instance *usbd_device_alternate_instance (struct usb_device_instance *device, int port, int speed, int configuration, int interface, int alternate)
 {
 	struct usb_interface_instance *interface_instance;
 
-	if ((interface_instance = usbd_device_interface_instance (device, port, configuration, interface)) == NULL) {
+	if ((interface_instance = usbd_device_interface_instance (device, port, speed, configuration, interface)) == NULL) {
 		return NULL;
 	}
 
@@ -223,15 +233,29 @@ struct usb_device_descriptor *usbd_device_device_descriptor (struct usb_device_i
  */
 struct usb_configuration_descriptor *usbd_device_configuration_descriptor (struct
 									   usb_device_instance
-									   *device, int port, int configuration)
+									   *device, int port, int speed, int configuration)
 {
 	struct usb_configuration_instance *configuration_instance;
-	if (!(configuration_instance = usbd_device_configuration_instance (device, port, configuration))) {
+	if (!(configuration_instance = usbd_device_configuration_instance (device, port, speed, configuration))) {
 		return NULL;
 	}
 	return (configuration_instance->configuration_descriptor);
 }
 
+/**
+ * usbd_device_qualifier_descriptor
+ * @device: which device
+ * @port: which port
+ * @configuration: index to configuration, 0 - N-1
+ *
+ * Return the specified configuration descriptor for the specified device.
+ */
+struct usb_qualifier_descriptor *usbd_device_qualifier_descriptor (struct
+									   usb_device_instance
+									   *device, int port)
+{
+    return (device->qualifier_descriptor);
+}
 
 /**
  * usbd_device_interface_descriptor
@@ -244,10 +268,10 @@ struct usb_configuration_descriptor *usbd_device_configuration_descriptor (struc
  * Return the specified interface descriptor for the specified device.
  */
 struct usb_interface_descriptor *usbd_device_interface_descriptor (struct usb_device_instance
-								   *device, int port, int configuration, int interface, int alternate)
+								   *device, int port, int speed, int configuration, int interface, int alternate)
 {
 	struct usb_interface_instance *interface_instance;
-	if (!(interface_instance = usbd_device_interface_instance (device, port, configuration, interface))) {
+	if (!(interface_instance = usbd_device_interface_instance (device, port, speed, configuration, interface))) {
 		return NULL;
 	}
 	if ((alternate < 0) || (alternate >= interface_instance->alternates)) {
@@ -268,11 +292,11 @@ struct usb_interface_descriptor *usbd_device_interface_descriptor (struct usb_de
  * Return the specified endpoint descriptor for the specified device.
  */
 struct usb_endpoint_descriptor *usbd_device_endpoint_descriptor_index (struct usb_device_instance
-								       *device, int port, int configuration, int interface, int alternate, int index)
+								       *device, int port, int speed, int configuration, int interface, int alternate, int index)
 {
 	struct usb_alternate_instance *alternate_instance;
 
-	if (!(alternate_instance = usbd_device_alternate_instance (device, port, configuration, interface, alternate))) {
+	if (!(alternate_instance = usbd_device_alternate_instance (device, port, speed, configuration, interface, alternate))) {
 		return NULL;
 	}
 	if (index >= alternate_instance->endpoints) {
@@ -292,11 +316,11 @@ struct usb_endpoint_descriptor *usbd_device_endpoint_descriptor_index (struct us
  *
  * Return the specified endpoint transfer size;
  */
-int usbd_device_endpoint_transfersize (struct usb_device_instance *device, int port, int configuration, int interface, int alternate, int index)
+int usbd_device_endpoint_transfersize (struct usb_device_instance *device, int port, int speed, int configuration, int interface, int alternate, int index)
 {
 	struct usb_alternate_instance *alternate_instance;
 
-	if (!(alternate_instance = usbd_device_alternate_instance (device, port, configuration, interface, alternate))) {
+	if (!(alternate_instance = usbd_device_alternate_instance (device, port, speed, configuration, interface, alternate))) {
 		return 0;
 	}
 	if (index >= alternate_instance->endpoints) {
@@ -317,12 +341,12 @@ int usbd_device_endpoint_transfersize (struct usb_device_instance *device, int p
  *
  * Return the specified endpoint descriptor for the specified device.
  */
-struct usb_endpoint_descriptor *usbd_device_endpoint_descriptor (struct usb_device_instance *device, int port, int configuration, int interface, int alternate, int endpoint)
+struct usb_endpoint_descriptor *usbd_device_endpoint_descriptor (struct usb_device_instance *device, int port, int speed, int configuration, int interface, int alternate, int endpoint)
 {
 	struct usb_endpoint_descriptor *endpoint_descriptor;
 	int i;
 
-	for (i = 0; !(endpoint_descriptor = usbd_device_endpoint_descriptor_index (device, port, configuration, interface, alternate, i)); i++) {
+	for (i = 0; !(endpoint_descriptor = usbd_device_endpoint_descriptor_index (device, port, speed, configuration, interface, alternate, i)); i++) {
 		if (endpoint_descriptor->bEndpointAddress == endpoint) {
 			return endpoint_descriptor;
 		}
@@ -337,9 +361,35 @@ struct usb_endpoint_descriptor *usbd_device_endpoint_descriptor (struct usb_devi
  *
  * Return non-zero if endpoint is halted.
  */
-int usbd_endpoint_halted (struct usb_device_instance *device, int endpoint)
+int usbd_endpoint_halted (struct usb_device_instance *device, int ep_index)
 {
-	return (device->status == USB_STATUS_HALT);
+    struct usb_endpoint_instance *endpoint; 
+    endpoint = &(device->bus->endpoint_array[ep_index & USB_ENDPOINT_NUMBER_MASK]);
+
+    if (ep_index & USB_DIR_IN)
+	return (endpoint->tx_status == USB_STATUS_HALT);
+    else
+	return (endpoint->rcv_status == USB_STATUS_HALT);
+}
+
+/**
+ * usbd_endpoint_set_halt
+ * @device: point to struct usb_device_instance
+ * @endpoint: endpoint to check
+ *
+ * Set or clear halt bit for endpoint
+ */
+int usbd_endpoint_set_halt (struct usb_device_instance *device, int ep_index, int halt)
+{
+    struct usb_endpoint_instance *endpoint; 
+    endpoint = &(device->bus->endpoint_array[ep_index & USB_ENDPOINT_NUMBER_MASK]);
+
+    if (ep_index & USB_DIR_IN)
+	endpoint->tx_status = (halt) ? USB_STATUS_HALT : 0;
+    else
+	endpoint->rcv_status = (halt) ? USB_STATUS_HALT : 0;
+
+    return 0;
 }
 
 
@@ -365,7 +415,7 @@ void usbd_rcv_complete(struct usb_endpoint_instance *endpoint, int len, int urb_
 			/*rcv_urb->actual_length, rcv_urb->buffer_length); */
 
 			/* check the urb is ok, are we adding data less than the packetsize */
-			if (!urb_bad && (len <= endpoint->rcv_packetSize)) {
+			if (!urb_bad) {
 			  /*usbdbg("updating actual_length by %d\n",len); */
 
 				/* increment the received data size */

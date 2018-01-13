@@ -327,6 +327,11 @@ int tstc(void)
 
 void putc(const char c)
 {
+#ifdef CONFIG_QBOOT	
+	if (gd->flags & GD_FLG_QUICKBOOT) {
+		return;
+	}
+#endif
 #ifdef CONFIG_SILENT_CONSOLE
 	if (gd->flags & GD_FLG_SILENT)
 		return;
@@ -348,6 +353,11 @@ void putc(const char c)
 
 void puts(const char *s)
 {
+#ifdef CONFIG_QBOOT
+	if (gd->flags & GD_FLG_QUICKBOOT) {
+		return;
+	}
+#endif
 #ifdef CONFIG_SILENT_CONSOLE
 	if (gd->flags & GD_FLG_SILENT)
 		return;
@@ -528,7 +538,7 @@ int console_init_f(void)
 	if (getenv("silent") != NULL)
 		gd->flags |= GD_FLG_SILENT;
 #endif
-
+	puts("HW\n"); // Hello World!
 	return 0;
 }
 

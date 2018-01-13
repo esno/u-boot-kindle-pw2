@@ -4,7 +4,9 @@
  *
  * (C) Copyright 2001 Sysgo Real-Time Solutions, GmbH <www.elinos.com>
  * Andreas Heppel <aheppel@sysgo.de>
-
+ *
+ * Copyright (C) 2010-2012 Freescale Semiconductor, Inc.
+ *
  * See file CREDITS for list of people who contributed to this
  * project.
  *
@@ -60,9 +62,10 @@ DECLARE_GLOBAL_DATA_PTR;
     !defined(CONFIG_ENV_IS_IN_NVRAM)	&& \
     !defined(CONFIG_ENV_IS_IN_ONENAND)	&& \
     !defined(CONFIG_ENV_IS_IN_SPI_FLASH)	&& \
+    !defined(CONFIG_ENV_IS_IN_MMC)	&& \
+    !defined(CONFIG_ENV_IS_IN_SATA)      && \
     !defined(CONFIG_ENV_IS_NOWHERE)
-# error Define one of CONFIG_ENV_IS_IN_{EEPROM|FLASH|DATAFLASH|ONENAND|\
-SPI_FLASH|MG_DISK|NVRAM|NOWHERE}
+# error Define one of CONFIG_ENV_IS_IN_{NVRAM|EEPROM|FLASH|DATAFLASH|ONENAND|SPI_FLASH|SATA|MMC|MG_DISK|NOWHERE}
 #endif
 
 #define XMK_STR(x)	#x
@@ -424,6 +427,16 @@ int do_setenv (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	return _do_setenv (flag, argc, argv);
 }
 
+#if defined(CONFIG_CMD_SAVEENV) && !defined(CONFIG_ENV_IS_NOWHERE)
+int do_destroyenv(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+{
+	printf("invalidate the CRC\n");
+	env_crc_destroy();
+	printf("write invalidate enviroment data to storage\n");
+	return saveenv() ? 1 : 0;
+}
+#endif
+
 /************************************************************************
  * Prompt for environment variable
  */
@@ -556,7 +569,6 @@ int getenv_r (char *name, char *buf, unsigned len)
 }
 
 #if defined(CONFIG_CMD_SAVEENV) && !defined(CONFIG_ENV_IS_NOWHERE)
-
 int do_saveenv (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
 	extern char * env_name_spec;
@@ -613,6 +625,15 @@ U_BOOT_CMD(
 	"setenv name\n"
 	"    - delete environment variable 'name'"
 );
+
+#if defined(CONFIG_CMD_SAVEENV) && !defined(CONFIG_ENV_IS_NOWHERE)
+U_BOOT_CMD(
+	destroyenv, CONFIG_SYS_MAXARGS, 0,	do_destroyenv,
+	"destroy enviroment variables stored in medium",
+	"\n    - destroy all environment variables in medium"
+	"\n      after reset the default settings will be used"
+);
+#endif
 
 #if defined(CONFIG_CMD_ASKENV)
 

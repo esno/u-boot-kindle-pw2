@@ -188,6 +188,74 @@ struct tag_cmdline {
 	char	cmdline[1];	/* this is the minimum size */
 };
 
+/* 16 byte id for serial number. "64-bits wasn't enough for us." */
+#define ATAG_SERIAL16	0x5441000a
+
+/* 16 byte id for a board revision. */
+#define ATAG_REVISION16	0x5441000b
+
+/* 16 digit alphanumeric id used for serial numbers, board ids, etc. */
+struct tag_id16 {
+	u8 data[16];
+};
+
+/* 32 bit value for POST results. */
+#define ATAG_POST	0x5441000c
+
+struct tag_post {
+    u32 failure;
+};
+
+/* mac address / secret */
+#define ATAG_MACADDR	0x5441000d
+
+struct tag_macaddr {
+   u8 address[12];
+   u8 secret[20];
+};
+
+/* 20 byte id for serial number. "even 16 bytes can't contain us." */
+#define ATAG_SERIAL20	0x5441000e
+
+/* 20 digit alphanumeric id used for serial number. */
+struct tag_id20 {
+	u8 data[20];
+};
+
+/* bootmode/postmode variables */
+#define ATAG_BOOTMODE	0x5441000f
+
+struct tag_bootmode {
+   u8 boot[16];
+   u8 post[16];
+#ifdef CONFIG_QBOOT
+   u8 oldboot[16];
+#endif
+};
+
+/* LPDDR2 vendor ID */
+#define ATAG_DDRMFGID   0x54410010
+
+struct tag_ddrmfgid {
+	u32 mfgid;
+};
+
+/* bluetooth mac address */
+#define ATAG_BTMACADDR  0x54410011
+
+struct tag_btmacaddr {
+    u8 address[12];
+};
+
+#ifdef CONFIG_QBOOT
+/* Quickboot info */
+#define ATAG_QBOOT	0x54410012
+
+struct tag_qboot {
+    u8 qbcount[10];
+};
+#endif
+
 /* acorn RiscPC specific information */
 #define ATAG_ACORN	0x41000101
 
@@ -216,8 +284,17 @@ struct tag {
 		struct tag_serialnr	serialnr;
 		struct tag_revision	revision;
 		struct tag_videolfb	videolfb;
-		struct tag_cmdline	cmdline;
-
+ 		struct tag_cmdline	cmdline;
+		struct tag_id16		id16;
+		struct tag_id20		id20;
+		struct tag_post		post;
+		struct tag_macaddr	macaddr;
+		struct tag_bootmode	bootmode;
+		struct tag_ddrmfgid	ddrmfgid;
+		struct tag_btmacaddr	btmacaddr;
+#ifdef CONFIG_QBOOT
+		struct tag_qboot	qboot;
+#endif
 		/*
 		 * Acorn specific
 		 */

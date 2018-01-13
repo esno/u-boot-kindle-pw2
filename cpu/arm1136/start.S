@@ -180,6 +180,7 @@ stack_setup:
 #else
 	sub	r0, r0, #CONFIG_SYS_MALLOC_LEN /* malloc area			    */
 	sub	r0, r0, #CONFIG_SYS_GBL_DATA_SIZE /* bdinfo			    */
+	sub	r0, r0, #4		   /* CONFIG_SYS_POST_WORD_ADDR         */
 #ifdef CONFIG_USE_IRQ
 	sub	r0, r0, #(CONFIG_STACKSIZE_IRQ+CONFIG_STACKSIZE_FIQ)
 #endif

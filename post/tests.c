@@ -29,6 +29,11 @@
 
 #include <post.h>
 
+extern int inventory_post_test (int flags);
+extern int accelerometer_self_test (int flags);
+extern int mmc_crc32_post_test (int flags);
+extern int gpio_post_test (int flags);
+
 extern int ocm_post_test (int flags);
 extern int cache_post_test (int flags);
 extern int watchdog_post_test (int flags);
@@ -58,9 +63,82 @@ extern int sysmon_init_f (void);
 
 extern void sysmon_reloc (void);
 
+#if CONFIG_POST & CONFIG_SYS_POST_FAIL
+int fail_post_test (int flags)
+{
+	post_log ("Testing failure mechanism.\n");
+	return -1;
+}
+#endif
 
 struct post_test post_list[] =
 {
+#if CONFIG_POST & CONFIG_SYS_POST_FAIL
+    {
+	"Non-Critical failure test",
+	"fail",
+	"This test checks the failure mechanism.",
+	POST_RAM | POST_MANUAL,
+	&fail_post_test,
+	NULL,
+	NULL,
+	CONFIG_SYS_POST_FAIL
+    },
+#endif
+#if CONFIG_POST & CONFIG_SYS_POST_GPIO
+    {
+	"GPIO test",
+	"gpio",
+	"This test verifies the GPIO operation.",
+	POST_RAM | POST_MANUAL,
+	&gpio_post_test,
+	NULL,
+	NULL,
+	CONFIG_SYS_POST_GPIO
+    },
+#endif
+#if CONFIG_POST & CONFIG_SYS_POST_LED
+    CONFIG_SYS_POST_LED,
+#endif
+#if CONFIG_POST & CONFIG_SYS_POST_PMIC
+    CONFIG_SYS_POST_PMIC,
+#endif
+#if CONFIG_POST & CONFIG_SYS_POST_MMC_CRC32
+    {
+	"MMC CRC32 checksum test",
+	"mmc_crc32",
+	"This tests the CRC32 checksum of the MMC.",
+	POST_RAM | POST_MANUAL,
+	&mmc_crc32_post_test,
+	NULL,
+	NULL,
+	CONFIG_SYS_POST_MMC_CRC32
+    },
+#endif
+#if CONFIG_POST & CONFIG_SYS_POST_INVENTORY
+    {
+	"Device inventory test",
+	"inventory",
+	"This test checks that devices exist.",
+	POST_RAM | POST_MANUAL,
+	&inventory_post_test,
+	NULL,
+	NULL,
+	CONFIG_SYS_POST_INVENTORY
+    },
+#endif
+#if CONFIG_POST & CONFIG_SYS_POST_INVENTORY
+    {
+        "Device run accelerometer test",
+        "acc",
+        "This test is do accelerometer self test",
+	POST_RAM | POST_MANUAL,
+	&accelerometer_self_test,
+	NULL,
+	NULL,
+	CONFIG_SYS_POST_INVENTORY,
+    },
+#endif
 #if CONFIG_POST & CONFIG_SYS_POST_OCM
     {
 	"OCM test",
@@ -130,7 +208,7 @@ struct post_test post_list[] =
 	"Memory test",
 	"memory",
 	"This test checks RAM.",
-	POST_ROM | POST_POWERON | POST_SLOWTEST | POST_PREREL,
+	POST_ROM | POST_ALWAYS | POST_SLOWTEST | POST_PREREL | POST_CRITICAL,
 	&memory_post_test,
 	NULL,
 	NULL,

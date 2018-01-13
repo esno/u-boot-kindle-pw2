@@ -116,7 +116,9 @@ int zunzip(void *dst, int dstlen, unsigned char *src, unsigned long *lenp,
 	s.avail_out = dstlen;
 	r = inflate(&s, Z_FINISH);
 	if ((r != Z_STREAM_END) && (stoponerr==1)) {
+#ifndef CONFIG_QUIET_ZLIB
 		printf ("Error: inflate() returned %d\n", r);
+#endif
 		inflateEnd(&s);
 		return (-1);
 	}

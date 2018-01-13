@@ -172,6 +172,18 @@ DECLARE_GLOBAL_DATA_PTR;
 #warning "Injecting address line errors for testing purposes"
 #endif
 
+#define DATA_LINES   0x00000001
+#define ADDR_LOW     0x00000002
+#define ADDR_HIGH    0x00000004
+#define TEST1_ZEROS  0x00000008
+#define TEST1_NEG    0x00000010
+#define TEST1_CB5    0x00000020
+#define TEST1_CBA    0x00000040
+#define TEST2_BITF   0x00000080
+#define TEST3_APAT   0x00000100
+#define TEST4_APAT   0x00000200
+#define TEST_FAST    0x00000107
+#define TEST_ALL     0xFFFFFFFF
 
 /*
  * This function performs a double word move from the data at
@@ -230,6 +242,7 @@ static int memory_post_dataline(unsigned long long * pmem)
 	unsigned int hi, lo, pathi, patlo;
 	int ret = 0;
 
+	debug("Data ");
 	for ( i = 0; i < num_patterns; i++) {
 		move64(&(pattern[i]), pmem++);
 		/*
@@ -267,6 +280,7 @@ static int memory_post_addrline(ulong *testaddr, ulong *base, ulong size)
 	ulong xor;
 	int   ret = 0;
 
+	debug("Addr ");
 	end = (ulong *)((ulong)base + size);	/* pointer arith! */
 	xor = 0;
 	for(xor = sizeof(ulong); xor > 0; xor <<= 1) {
@@ -300,6 +314,7 @@ static int memory_post_test1 (unsigned long start,
 	ulong readback;
 	int ret = 0;
 
+	debug("1 0x%x ", val);
 	for (i = 0; i < size / sizeof (ulong); i++) {
 		mem[i] = val;
 		if (i % 1024 == 0)
@@ -330,6 +345,7 @@ static int memory_post_test2 (unsigned long start, unsigned long size)
 	ulong readback;
 	int ret = 0;
 
+	debug("2 ");
 	for (i = 0; i < size / sizeof (ulong); i++) {
 		mem[i] = 1 << (i % 32);
 		if (i % 1024 == 0)
@@ -360,6 +376,7 @@ static int memory_post_test3 (unsigned long start, unsigned long size)
 	ulong readback;
 	int ret = 0;
 
+	debug("3 ");
 	for (i = 0; i < size / sizeof (ulong); i++) {
 		mem[i] = i;
 		if (i % 1024 == 0)
@@ -390,6 +407,7 @@ static int memory_post_test4 (unsigned long start, unsigned long size)
 	ulong readback;
 	int ret = 0;
 
+	debug("4 ");
 	for (i = 0; i < size / sizeof (ulong); i++) {
 		mem[i] = ~i;
 		if (i % 1024 == 0)
@@ -413,71 +431,120 @@ static int memory_post_test4 (unsigned long start, unsigned long size)
 	return ret;
 }
 
-static int memory_post_tests (unsigned long start, unsigned long size)
+static int memory_post_tests (unsigned long start, unsigned long size, unsigned int mask)
 {
 	int ret = 0;
 
-	if (ret == 0)
+	debug("\nTesting 0x%x 0x%x ", start, size);
+
+	if ((ret == 0) && (mask & DATA_LINES)) {
 		ret = memory_post_dataline ((unsigned long long *)start);
-	WATCHDOG_RESET ();
-	if (ret == 0)
+		WATCHDOG_RESET ();
+	}
+	if ((ret == 0) && (mask & ADDR_LOW)) {
 		ret = memory_post_addrline ((ulong *)start, (ulong *)start, size);
-	WATCHDOG_RESET ();
-	if (ret == 0)
+		WATCHDOG_RESET ();
+	}
+	if ((ret == 0) && (mask & ADDR_HIGH)) {
 		ret = memory_post_addrline ((ulong *)(start + size - 8),
 					    (ulong *)start, size);
-	WATCHDOG_RESET ();
-	if (ret == 0)
+		WATCHDOG_RESET ();
+	}
+	if ((ret == 0) && (mask & TEST1_ZEROS)) {
 		ret = memory_post_test1 (start, size, 0x00000000);
-	WATCHDOG_RESET ();
-	if (ret == 0)
+		WATCHDOG_RESET ();
+	}
+	if ((ret == 0) && (mask & TEST1_NEG)) {
 		ret = memory_post_test1 (start, size, 0xffffffff);
-	WATCHDOG_RESET ();
-	if (ret == 0)
+		WATCHDOG_RESET ();
+	}
+	if ((ret == 0) && (mask & TEST1_CB5)) {
 		ret = memory_post_test1 (start, size, 0x55555555);
-	WATCHDOG_RESET ();
-	if (ret == 0)
+		WATCHDOG_RESET ();
+	}
+	if ((ret == 0) && (mask & TEST1_CBA)) {
 		ret = memory_post_test1 (start, size, 0xaaaaaaaa);
-	WATCHDOG_RESET ();
-	if (ret == 0)
+		WATCHDOG_RESET ();
+	}
+	if ((ret == 0) && (mask & TEST2_BITF)) {
 		ret = memory_post_test2 (start, size);
-	WATCHDOG_RESET ();
-	if (ret == 0)
+		WATCHDOG_RESET ();
+	}
+	if ((ret == 0) && (mask & TEST3_APAT)) {
 		ret = memory_post_test3 (start, size);
-	WATCHDOG_RESET ();
-	if (ret == 0)
+		WATCHDOG_RESET ();
+	}
+	if ((ret == 0) && (mask & TEST4_APAT)) {
 		ret = memory_post_test4 (start, size);
-	WATCHDOG_RESET ();
+		WATCHDOG_RESET ();
+	}
 
 	return ret;
 }
 
+extern unsigned int get_dram_size(void);
+
 int memory_post_test (int flags)
 {
-	int ret = 0;
-	bd_t *bd = gd->bd;
-	unsigned long memsize = (bd->bi_memsize >= 256 << 20 ?
-				 256 << 20 : bd->bi_memsize) - (1 << 20);
+    int ret = 0;
+    unsigned long mem_start, mem_size;
 
-	/* Limit area to be tested with the board info struct */
-	if (CONFIG_SYS_SDRAM_BASE + memsize > (ulong)bd)
-		memsize = (ulong)bd - CONFIG_SYS_SDRAM_BASE;
-
-	if (flags & POST_SLOWTEST) {
-		ret = memory_post_tests (CONFIG_SYS_SDRAM_BASE, memsize);
+    if (flags & POST_SLOWTEST) {
+#if defined(CONFIG_SYS_MEMPROTECT_START)
+	    mem_start = CONFIG_SYS_MEMTEST_START;
+		mem_size = CONFIG_SYS_MEMPROTECT_START - CONFIG_SYS_MEMTEST_START;
+		printf ("Full Memory Test 0x%lx, 0x%lx\n", mem_start, mem_size);
+		ret = memory_post_tests (mem_start, mem_size, TEST_ALL);
+#else
+        mem_start = CONFIG_SYS_MEMTEST_START;
+		mem_size = CONFIG_SYS_MEMTEST_END + 1 - CONFIG_SYS_MEMTEST_START;
+		printf ("Full Memory Test 0x%lx, 0x%lx\n", mem_start, mem_size);
+		ret = memory_post_tests (mem_start, mem_size, TEST_ALL);
+#endif
+#if defined(CONFIG_SYS_MEMPROTECT_END)
+		if (ret == 0) {
+		    mem_start = CONFIG_SYS_MEMPROTECT_END + 1;
+			mem_size = CONFIG_SYS_MEMTEST_END - CONFIG_SYS_MEMPROTECT_END;
+			printf ("Full Memory Test 0x%lx, 0x%lx\n", mem_start, mem_size);
+			ret = memory_post_tests (mem_start, mem_size, TEST_ALL);
+		}
+#endif
 	} else {			/* POST_NORMAL */
 
-		unsigned long i;
+	    unsigned long i, protect_start, protect_end;
 
-		for (i = 0; i < (memsize >> 20) && ret == 0; i++) {
-			if (ret == 0)
-				ret = memory_post_tests (i << 20, 0x800);
-			if (ret == 0)
-				ret = memory_post_tests ((i << 20) + 0xff800, 0x800);
+#if defined(CONFIG_SYS_MEMPROTECT_START)
+	    mem_start = CONFIG_SYS_MEMTEST_START;
+		mem_size = CONFIG_SYS_MEMPROTECT_START - CONFIG_SYS_MEMTEST_START;
+		printf ("Quick Memory Test 0x%lx, 0x%lx\n", mem_start, mem_size);
+		protect_start = ((unsigned long) CONFIG_SYS_MEMPROTECT_START) >> 20;
+		protect_end = ((unsigned long) CONFIG_SYS_MEMTEST_START) >> 20;
+#else
+		mem_start = CONFIG_SYS_MEMTEST_START;
+		mem_size = CONFIG_SYS_MEMTEST_END + 1 - CONFIG_SYS_MEMTEST_START;
+		printf ("Quick Memory Test 0x%lx, 0x%lx\n", mem_start, mem_size);
+		protect_start = ((unsigned long) CONFIG_SYS_MEMTEST_END) >> 20;
+		protect_end = ((unsigned long) CONFIG_SYS_MEMTEST_START) >> 20;
+#endif
+#if defined(CONFIG_SYS_MEMPROTECT_END)
+		mem_start = CONFIG_SYS_MEMPROTECT_END + 1;
+		mem_size = CONFIG_SYS_MEMTEST_END - CONFIG_SYS_MEMPROTECT_END;
+		printf ("Quick Memory Test 0x%lx, 0x%lx\n", mem_start, mem_size);
+		protect_end = ((unsigned long) CONFIG_SYS_MEMPROTECT_END) >> 20;
+#endif
+		mem_start = ((unsigned long) CONFIG_SYS_MEMTEST_START) >> 20;
+		mem_size = ((unsigned long) CONFIG_SYS_MEMTEST_END + 1) >> 20;
+		for (i = mem_start; i < mem_size && ret == 0; i++) {
+			if (i < protect_start || i > protect_end) {
+				if (ret == 0)
+					ret = memory_post_tests (i << 20, 0x800, TEST_FAST);
+				if (ret == 0)
+					ret = memory_post_tests ((i << 20) + 0xff800, 0x800, TEST_FAST);
+			}
 		}
-	}
+    }
 
-	return ret;
+    return ret;
 }
 
 #endif /* CONFIG_POST & CONFIG_SYS_POST_MEMORY */

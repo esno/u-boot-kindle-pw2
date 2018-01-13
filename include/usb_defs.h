@@ -84,7 +84,7 @@
 #define USB_SPEED_FULL		0x0	/* 12Mbps */
 #define USB_SPEED_LOW		0x1	/* 1.5Mbps */
 #define USB_SPEED_HIGH		0x2	/* 480Mbps */
-#define USB_SPEED_RESERVED	0x3
+#define USB_SPEED_UNKNOWN	0x3
 
 /* Descriptor types */
 #define USB_DT_DEVICE        0x01
@@ -92,6 +92,8 @@
 #define USB_DT_STRING        0x03
 #define USB_DT_INTERFACE     0x04
 #define USB_DT_ENDPOINT      0x05
+#define USB_DT_DEVICE_QUALIFIER		0x06
+#define USB_DT_OTHER_SPEED_CONFIG	0x07
 
 #define USB_DT_HID          (USB_TYPE_CLASS | 0x01)
 #define USB_DT_REPORT       (USB_TYPE_CLASS | 0x02)

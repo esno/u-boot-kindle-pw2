@@ -24,7 +24,7 @@
 VERSION = 2009
 PATCHLEVEL = 08
 SUBLEVEL =
-EXTRAVERSION =
+EXTRAVERSION = -lab126
 ifneq "$(SUBLEVEL)" ""
 U_BOOT_VERSION = $(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
 else
@@ -106,7 +106,7 @@ OBJTREE		:= $(if $(BUILD_DIR),$(BUILD_DIR),$(CURDIR))
 SRCTREE		:= $(CURDIR)
 TOPDIR		:= $(SRCTREE)
 LNDIR		:= $(OBJTREE)
-export	TOPDIR SRCTREE OBJTREE
+export	O TOPDIR SRCTREE OBJTREE
 
 MKCONFIG	:= $(SRCTREE)/mkconfig
 export MKCONFIG
@@ -143,7 +143,7 @@ SUBDIRS	= tools \
 	  examples/standalone \
 	  examples/api
 
-.PHONY : $(SUBDIRS)
+.PHONY : $(SUBDIRS) install
 
 ifeq ($(obj)include/config.mk,$(wildcard $(obj)include/config.mk))
 
@@ -3229,6 +3229,70 @@ mx31pdk_nand_config	: unconfig
 	fi
 	@$(MKCONFIG) -a mx31pdk arm arm1136 mx31pdk freescale mx31
 
+imx50_yoshi_config		\
+imx50_yoshi_mfgtool_config	\
+imx50_yoshi_bist_config		\
+imx50_yoshime3_config		\
+imx50_yoshime3_mfgtool_config	\
+imx50_yoshime3_bist_config :    unconfig
+	@$(MKCONFIG) $(@:_config=) arm arm_cortexa8 imx50_yoshi NULL mx50
+
+imx60_wario_config		\
+imx60_wario_mfgtool_config	\
+imx60_wario_bist_config		\
+imx60_duet_config			\
+imx60_duet_mfgtool_config	\
+imx60_duet_bist_config :	unconfig
+	@$(MKCONFIG) $(@:_config=) arm arm_cortexa8 imx60_wario NULL mx6
+
+mx6dl_arm2_config		\
+mx6dl_arm2_iram_config		\
+mx6dl_arm2_mfg_config		\
+mx6dl_arm2_lpddr2_config	\
+mx6q_arm2_config			\
+mx6q_arm2_android_config        \
+mx6q_arm2_mfg_config		\
+mx6q_arm2_lpddr2_config	\
+mx6q_arm2_lpddr2pop_config	\
+mx6q_arm2_iram_config	: unconfig
+	@[ -z "$(findstring iram_,$@)" ] || \
+		{ echo "TEXT_BASE = 0x00907000" >$(obj)board/freescale/mx6q_arm2/config.tmp ; \
+		  echo "... with iram configuration" ; \
+		}
+	@$(MKCONFIG) $(@:_config=) arm arm_cortexa8 mx6q_arm2 freescale mx6
+
+mx6dl_sabresd_config			\
+mx6dl_sabresd_mfg_config		\
+mx6dl_sabresd_android_config			\
+mx6q_sabresd_config			\
+mx6q_sabresd_android_config             \
+mx6q_sabresd_mfg_config			\
+mx6q_sabresd_iram_config	: unconfig
+	@[ -z "$(findstring iram_,$@)" ] || \
+		{ echo "TEXT_BASE = 0x00907000" >$(obj)board/freescale/mx6q_sabresd/config.tmp ; \
+		  echo "... with iram configuration" ; \
+		}
+	@$(MKCONFIG) $(@:_config=) arm arm_cortexa8 mx6q_sabresd freescale mx6
+
+mx6q_sabrelite_config			\
+mx6q_sabrelite_android_config 		\
+mx6q_sabrelite_mfg_config   : unconfig
+	@$(MKCONFIG) $(@:_config=) arm arm_cortexa8 mx6q_sabrelite freescale mx6
+
+mx6solo_sabreauto_config	\
+mx6solo_sabreauto_mfg_config	\
+mx6q_sabreauto_mfg_config	\
+mx6q_sabreauto_config    : unconfig
+	@$(MKCONFIG) $(@:_config=) arm arm_cortexa8 mx6q_sabreauto freescale mx6
+
+mx6sl_arm2_config		\
+mx6sl_arm2_iram_config	: unconfig
+	@[ -z "$(findstring iram_,$@)" ] || \
+		{ echo "TEXT_BASE = 0x00907000" >$(obj)board/freescale/mx6sl_arm2/config.tmp ; \
+		  echo "... with iram configuration" ; \
+		}
+	@$(MKCONFIG) $(@:_config=) arm arm_cortexa8 mx6sl_arm2 freescale mx6
+
 omap2420h4_config	: unconfig
 	@$(MKCONFIG) $(@:_config=) arm arm1136 omap2420h4 NULL omap24xx
 
@@ -3720,4 +3784,15 @@ backup:
 	F=`basename $(TOPDIR)` ; cd .. ; \
 	gtar --force-local -zcvf `date "+$$F-%Y-%m-%d-%T.tar.gz"` $$F
 
+install:
+	install -d /targets/$(shell sb-conf cu)/$(TARGET)
+	install -m 644 u-boot.bin /targets/$(shell sb-conf cu)/$(TARGET)
+	install -m 644 prod/u-boot.bin /targets/$(shell sb-conf cu)/$(TARGET)/u-boot.prod.bin
+	install -m 644 bist/u-boot.bin /targets/$(shell sb-conf cu)/$(TARGET)/u-boot.bist.bin
+	install -d /targets/$(shell sb-conf cu)/$(TARGET)/bist
+	install -m 644 bist/u-boot.bin bist/u-boot.map /targets/$(shell sb-conf cu)/$(TARGET)/bist
+	install -d /targets/$(shell sb-conf cu)/$(TARGET)/prod
+	install -m 644 prod/u-boot.bin prod/u-boot.map /targets/$(shell sb-conf cu)/$(TARGET)/prod
+	install -d /usr/local/bin
+	install -m 755 prod/tools/mkimage /usr/local/bin/mkimage
 #########################################################################

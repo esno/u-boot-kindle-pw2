@@ -24,7 +24,8 @@ PLATFORM_RELFLAGS += -fno-strict-aliasing -fno-common -ffixed-r8 \
 		     -msoft-float
 
 # Make ARMv5 to allow more compilers to work, even though its v7a.
-PLATFORM_CPPFLAGS += -march=armv5
+#PLATFORM_CPPFLAGS += -march=armv5
+PLATFORM_CPPFLAGS += -march=armv7-a
 # =========================================================================
 #
 # Supply options according to compiler version
@@ -32,3 +33,11 @@ PLATFORM_CPPFLAGS += -march=armv5
 # =========================================================================
 PLATFORM_RELFLAGS +=$(call cc-option,-mshort-load-bytes,\
 		    $(call cc-option,-malignment-traps,))
+
+# In GCC 4.7, -munaligned-access was enabled by default for ARM architectures
+# that support unaligned memory access.  However, U-Boot still configures the
+# ARM core to issue a data abort when trying to perform an unaligned memory
+# access, even though our architecture can handle it.  We use
+# -mno-unaligned-access to let GCC know that it can not generate code that
+# performs unaligned accesses in U-Boot.
+PLATFORM_CPPFLAGS += $(call cc-option,-mno-unaligned-access)

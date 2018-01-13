@@ -291,7 +291,7 @@ struct usb_bus_instance;
  * USB Spec Release number
  */
 
-#define USB_BCD_VERSION			0x0110
+#define USB_BCD_VERSION			0x0200
 
 
 /*
@@ -497,7 +497,6 @@ struct usb_endpoint_instance {
 	int endpoint_address;	/* logical endpoint address */
 
 	/* control */
-	int status;		/* halted */
 	int state;		/* available for use by bus interface driver */
 
 	/* receive side */
@@ -508,6 +507,7 @@ struct usb_endpoint_instance {
 	int rcv_packetSize;	/* maximum packet size from endpoint descriptor */
 	int rcv_transferSize;	/* maximum transfer size from function driver */
 	int rcv_queue;
+	int rcv_status;		/* halted */
 
 	/* transmit side */
 	struct urb_link tx;	/* urbs ready to transmit */
@@ -517,6 +517,7 @@ struct usb_endpoint_instance {
 	int tx_packetSize;	/* maximum packet size from endpoint descriptor */
 	int tx_transferSize;	/* maximum transfer size from function driver */
 	int tx_queue;
+	int tx_status;		/* halted */
 
 	int sent;		/* data already sent */
 	int last;		/* data sent in last packet XXX do we need this */
@@ -565,6 +566,7 @@ struct usb_device_instance {
 	/* generic */
 	char *name;
 	struct usb_device_descriptor *device_descriptor;	/* per device descriptor */
+	struct usb_qualifier_descriptor *qualifier_descriptor;
 
 	void (*event) (struct usb_device_instance *device, usb_device_event_t event, int data);
 
@@ -576,7 +578,8 @@ struct usb_device_instance {
 
 	/* configuration descriptors */
 	int configurations;
-	struct usb_configuration_instance *configuration_instance_array;
+	struct usb_configuration_instance *hs_configuration_instance_array;
+	struct usb_configuration_instance *fs_configuration_instance_array;
 
 	/* device state */
 	usb_device_state_t device_state;	/* current USB Device state */
@@ -586,6 +589,7 @@ struct usb_device_instance {
 	u8 configuration;	/* current show configuration (zero is default) */
 	u8 interface;		/* current interface (zero is default) */
 	u8 alternate;		/* alternate flag */
+	u8 speed;		/* current speed */
 
 	usb_device_status_t status;	/* device status */
 
@@ -646,21 +650,41 @@ void usbd_device_event (struct usb_device_instance *conf, usb_device_event_t, in
  * Various ways of finding descriptors based on the current device and any
  * possible configuration / interface / endpoint for it.
  */
-struct usb_configuration_descriptor *usbd_device_configuration_descriptor (struct usb_device_instance *, int, int);
+struct usb_configuration_descriptor *usbd_device_configuration_descriptor (struct usb_device_instance *, int, int, int);
 struct usb_function_instance *usbd_device_function_instance (struct usb_device_instance *, unsigned int);
-struct usb_interface_instance *usbd_device_interface_instance (struct usb_device_instance *, int, int, int);
-struct usb_alternate_instance *usbd_device_alternate_instance (struct usb_device_instance *, int, int, int, int);
-struct usb_interface_descriptor *usbd_device_interface_descriptor (struct usb_device_instance *, int, int, int, int);
-struct usb_endpoint_descriptor *usbd_device_endpoint_descriptor_index (struct usb_device_instance *, int, int, int, int, int);
-struct usb_class_descriptor *usbd_device_class_descriptor_index (struct usb_device_instance *, int, int, int, int, int);
+struct usb_interface_instance *usbd_device_interface_instance (struct usb_device_instance *, int, int, int, int);
+struct usb_alternate_instance *usbd_device_alternate_instance (struct usb_device_instance *, int, int, int, int, int);
+struct usb_interface_descriptor *usbd_device_interface_descriptor (struct usb_device_instance *, int, int, int, int, int);
+struct usb_endpoint_descriptor *usbd_device_endpoint_descriptor_index (struct usb_device_instance *, int, int, int, int, int, int);
+struct usb_class_descriptor *usbd_device_class_descriptor_index (struct usb_device_instance *, int, int, int, int, int, int);
 struct usb_class_report_descriptor *usbd_device_class_report_descriptor_index( struct usb_device_instance *, int , int , int , int , int );
-struct usb_endpoint_descriptor *usbd_device_endpoint_descriptor (struct usb_device_instance *, int, int, int, int, int);
-int				usbd_device_endpoint_transfersize (struct usb_device_instance *, int, int, int, int, int);
+struct usb_endpoint_descriptor *usbd_device_endpoint_descriptor (struct usb_device_instance *, int, int, int, int, int, int);
+int				usbd_device_endpoint_transfersize (struct usb_device_instance *, int, int, int, int, int, int);
 struct usb_string_descriptor *usbd_get_string (u8);
 struct usb_device_descriptor *usbd_device_device_descriptor (struct usb_device_instance *, int);
-
-int usbd_endpoint_halted (struct usb_device_instance *device, int endpoint);
+struct usb_qualifier_descriptor *usbd_device_qualifier_descriptor (struct usb_device_instance *device, int port);
+int usbd_endpoint_halted (struct usb_device_instance *device, int ep_index);
+int usbd_endpoint_set_halt (struct usb_device_instance *device, int ep_index, int halt);
 void usbd_rcv_complete(struct usb_endpoint_instance *endpoint, int len, int urb_bad);
 void usbd_tx_complete (struct usb_endpoint_instance *endpoint);
+
+
+/* Declarations */
+int udc_init(void);
+void udc_irq(void);
+int udc_endpoint_write(struct usb_endpoint_instance *endpoint);
+int udc_endpoint_read(struct usb_endpoint_instance *endpoint);
+void udc_setup_ep(struct usb_device_instance *device, unsigned int ep,
+		  struct usb_endpoint_instance *endpoint);
+void udc_connect(void);
+void udc_disconnect(void);
+void udc_enable(struct usb_device_instance *device);
+void udc_disable(void);
+void udc_startup_events(struct usb_device_instance *device);
+int udc_ep_set_halt(struct usb_device_instance *device, unsigned char ep_index, int halt);
+
+/* Flow control */
+void udc_set_nak(int epid);
+void udc_unset_nak (int epid);
 
 #endif

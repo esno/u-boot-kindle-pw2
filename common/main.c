@@ -287,6 +287,9 @@ void main_loop (void)
 #ifdef CONFIG_PREBOOT
 	char *p;
 #endif
+#ifdef CONFIG_BISTCMD
+	char *cmd;
+#endif
 #ifdef CONFIG_BOOTCOUNT_LIMIT
 	unsigned long bootcount = 0;
 	unsigned long bootlimit = 0;
@@ -369,6 +372,28 @@ void main_loop (void)
 	}
 #endif /* CONFIG_PREBOOT */
 
+#ifdef CONFIG_BISTCMD
+
+	cmd = (char *) CONFIG_BISTCMD_LOCATION;
+    
+	if (cmd[0] == CONFIG_BISTCMD_MAGIC) {
+
+	    cmd = &(cmd[1]);
+
+	    if (strlen(cmd) > 0) {
+
+		printf("running cmd: %s\n", cmd); 
+
+# ifndef CONFIG_SYS_HUSH_PARSER
+		run_command (cmd, 0);
+# else
+		parse_string_outer(cmd, FLAG_PARSE_SEMICOLON |
+				    FLAG_EXIT_FROM_LOOP);
+# endif
+	    }
+	}
+#endif /* CONFIG_BIST_CMD */
+
 #if defined(CONFIG_BOOTDELAY) && (CONFIG_BOOTDELAY >= 0)
 	s = getenv ("bootdelay");
 	bootdelay = s ? (int)simple_strtol(s, NULL, 10) : CONFIG_BOOTDELAY;
@@ -445,6 +470,8 @@ void main_loop (void)
 	for (;;);
 #else
 	for (;;) {
+		WATCHDOG_RESET();
+
 #ifdef CONFIG_BOOT_RETRY_TIME
 		if (rc >= 0) {
 			/* Saw enough of a valid command to
@@ -537,7 +564,7 @@ void reset_cmd_timeout(void)
 #define getcmd_getch()		getc()
 #define getcmd_cbeep()		getcmd_putch('\a')
 
-#define HIST_MAX		20
+#define HIST_MAX		2
 #define HIST_SIZE		MAX_CMDBUF_SIZE
 
 static int hist_max = 0;

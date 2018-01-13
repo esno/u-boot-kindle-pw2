@@ -245,7 +245,7 @@ int usb_get_report(struct usb_device *dev, int ifnum, unsigned char type,
 int usb_get_class_descriptor(struct usb_device *dev, int ifnum,
 			unsigned char type, unsigned char id, void *buf,
 			int size);
-int usb_clear_halt(struct usb_device *dev, int pipe);
+int usb_ep_set_halted(struct usb_device *dev, int pipe, int halt);
 int usb_string(struct usb_device *dev, int index, char *buf, size_t size);
 int usb_set_interface(struct usb_device *dev, int interface, int alternate);
 

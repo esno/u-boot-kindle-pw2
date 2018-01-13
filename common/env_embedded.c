@@ -183,6 +183,9 @@ env_t environment __PPCENV__ = {
 #ifdef  CONFIG_EXTRA_ENV_SETTINGS
 	CONFIG_EXTRA_ENV_SETTINGS
 #endif
+#if	defined(CONFIG_CMD_FB) && defined(CONFIG_EXTRA_FB_ENV_SETTINGS)
+	CONFIG_EXTRA_FB_ENV_SETTINGS
+#endif
 	"\0"		/* Term. env_t.data with 2 NULs */
 	}
 };

@@ -52,6 +52,7 @@
 
 #include <common.h>
 #include <usbdevice.h>
+#include <usb_defs.h>
 
 #if 0
 #define dbg_ep0(lvl,fmt,args...) serial_printf("[%s] %s:%d: "fmt"\n",__FILE__,__FUNCTION__,__LINE__,##args)
@@ -86,8 +87,8 @@ static int ep0_get_status (struct usb_device_instance *device,
 	case USB_REQ_RECIPIENT_INTERFACE:
 		break;
 	case USB_REQ_RECIPIENT_ENDPOINT:
-		cp[0] = usbd_endpoint_halted (device, index);
-		break;
+	  cp[0] = usbd_endpoint_halted (device, index);
+	  break;
 	case USB_REQ_RECIPIENT_OTHER:
 		urb->actual_length = 0;
 	default:
@@ -240,10 +241,12 @@ static int ep0_get_descriptor (struct usb_device_instance *device,
 				return -1;
 			}
 
+			dbg_ep0(0, "Get config %d (speed=0x%x)\n", index, device->speed);
 			if (!
 			    (configuration_descriptor =
 			     usbd_device_configuration_descriptor (device,
 								   port,
+								   device->speed,
 								   index))) {
 				dbg_ep0 (0,
 					 "usbd_device_configuration_descriptor failed: %d",
@@ -339,13 +342,64 @@ static int ep0_get_descriptor (struct usb_device_instance *device,
 #endif
 		}
 		break;
-	case USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER:
-		{
-			/* If a USB device supports both a full speed and low speed operation
-			 * we must send a Device_Qualifier descriptor here
-			 */
-			return -1;
+	  case USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER:
+	  {
+	      /* If a USB device supports both a full speed and low speed operation
+	       * we must send a Device_Qualifier descriptor here
+	       */
+	      struct usb_qualifier_descriptor *qualifier_descriptor;
+
+	      qualifier_descriptor = usbd_device_qualifier_descriptor(device, port);
+	      if(!qualifier_descriptor) {
+		  serial_printf("Invalid device qualifier!\n");
+		  return -1;
+	      }
+		    
+	      copy_config (urb, qualifier_descriptor, qualifier_descriptor->bLength, max);
+	      break;
+	  }
+	
+	  case USB_DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION:
+	    {
+		struct usb_configuration_descriptor
+		    *configuration_descriptor;
+		struct usb_device_descriptor *device_descriptor;
+		if (!
+		    (device_descriptor =
+		     usbd_device_device_descriptor (device, port))) {
+		    return -1;
 		}
+
+		if (index >= device_descriptor->bNumConfigurations) {
+		    dbg_ep0 (0, "index too large: %d >= %d", index,
+			     device_descriptor->
+			     bNumConfigurations);
+		    return -1;
+		}
+
+		dbg_ep0(0, "Get other config %d (speed=0x%x)\n", index, (device->speed == USB_SPEED_HIGH) ? USB_SPEED_FULL : USB_SPEED_HIGH);
+
+		if (!
+		    (configuration_descriptor =
+		     usbd_device_configuration_descriptor (device,
+							   port,
+							   (device->speed == USB_SPEED_HIGH) ? 
+								USB_SPEED_FULL : USB_SPEED_HIGH,
+							   index))) {
+		    dbg_ep0 (0,
+			     "usbd_device_configuration_descriptor failed: %d",
+			     index);
+		    return -1;
+		}
+
+		configuration_descriptor->bDescriptorType = USB_DT_OTHER_SPEED_CONFIG;
+
+		dbg_ep0(0, "attempt to copy %d bytes to urb\n",cpu_to_le16(configuration_descriptor->wTotalLength));
+		copy_config (urb, configuration_descriptor,
+			     cpu_to_le16(configuration_descriptor->wTotalLength),
+			     max);
+		break;
+	    }
 	default:
 		return -1;
 	}
@@ -485,8 +539,8 @@ int ep0_recv_setup (struct urb *urb)
 						   le16_to_cpu (request->wValue) & 0xff);
 
 		case USB_REQ_GET_CONFIGURATION:
-			serial_printf("get config %d\n", device->configuration);
-			return ep0_get_one (device, urb,
+		  dbg_ep0(0, "get config %d\n", device->configuration);
+		  return ep0_get_one (device, urb,
 					    device->configuration);
 
 		case USB_REQ_GET_INTERFACE:
@@ -527,12 +581,15 @@ int ep0_recv_setup (struct urb *urb)
 				return -1;
 
 			case USB_REQ_RECIPIENT_ENDPOINT:
-				dbg_ep0 (0, "ENDPOINT: %x", le16_to_cpu (request->wValue));
+				dbg_ep0 (0, "ENDPOINT: %x", le16_to_cpu (request->wIndex));
 				if (le16_to_cpu (request->wValue) == USB_ENDPOINT_HALT) {
-					/*return usbd_device_feature (device, le16_to_cpu (request->wIndex), */
-					/*                    request->bRequest == USB_REQ_SET_FEATURE); */
-					/* NEED TO IMPLEMENT THIS!!! */
+
+				    int ret = udc_ep_set_halt(device, le16_to_cpu (request->wIndex), (request->bRequest == USB_REQ_SET_FEATURE));
+				    if (ret) {
 					return -1;
+				    }
+
+				    return 0;
 				} else {
 					dbg_ep0 (1, "request %s bad wValue: %04x",
 						 USBD_DEVICE_REQUESTS
@@ -545,7 +602,7 @@ int ep0_recv_setup (struct urb *urb)
 		case USB_REQ_SET_ADDRESS:
 			/* check if this is a re-address, reset first if it is (this shouldn't be possible) */
 			if (device->device_state != STATE_DEFAULT) {
-				dbg_ep0 (1, "set_address: %02x state: %s",
+			    printf("ERROR set_address: %02x state: %s\n",
 					 le16_to_cpu (request->wValue),
 					 usbd_device_states[device->device_state]);
 				return -1;
@@ -582,7 +639,7 @@ int ep0_recv_setup (struct urb *urb)
 			device->interface = le16_to_cpu (request->wIndex);
 			device->alternate = le16_to_cpu (request->wValue);
 			/*dbg_ep0(2, "set interface: %d alternate: %d", device->interface, device->alternate); */
-			serial_printf ("DEVICE_SET_INTERFACE.. event?\n");
+			/* serial_printf ("DEVICE_SET_INTERFACE.. event?\n"); */
 			return 0;
 
 		case USB_REQ_GET_STATUS:

@@ -36,7 +36,15 @@ else
 ifeq ($(SOC),omap3)
 LOAD_ADDR = 0x80300000
 else
+ifeq ($(SOC),mx35)
+LOAD_ADDR = 0x97840000
+else
+ifeq ($(SOC),mx51)
+LOAD_ADDR = 0x97840000
+else
 LOAD_ADDR = 0xc100000
+endif
+endif
 endif
 endif
 endif
